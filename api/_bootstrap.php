@@ -1,5 +1,10 @@
 <?php
 
+// Never print warnings/notices into API JSON responses.
+ini_set('display_errors', '0');
+ini_set('log_errors', '1');
+error_reporting(E_ALL);
+
 // Prevent any output corruption
 if (ob_get_level() === 0) {
     ob_start();
@@ -69,11 +74,12 @@ function bootstrapStartSession(): void {
         return;
     }
 
-    if (isset($_COOKIE['PHPSESSID']) && $_COOKIE['PHPSESSID'] !== '') {
+    if (!headers_sent() && isset($_COOKIE['PHPSESSID']) && $_COOKIE['PHPSESSID'] !== '') {
         session_id($_COOKIE['PHPSESSID']);
     }
 
-    session_start();
+    // Suppress runtime warning text; errors are still logged via log_errors.
+    @session_start();
 }
 
 function bootstrapRequireAuth(): void {
