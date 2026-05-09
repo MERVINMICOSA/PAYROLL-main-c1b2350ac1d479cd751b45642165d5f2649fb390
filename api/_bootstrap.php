@@ -98,9 +98,8 @@ function jsonError($message, $status = 500, $details = null) {
 }
 
 function bootstrapStartSession(): void {
-    bootstrapApplyHeaders();
-
     if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+        bootstrapApplyHeaders();
         http_response_code(200);
         echo json_encode(["success" => true]);
         exit;
@@ -110,16 +109,12 @@ function bootstrapStartSession(): void {
         return;
     }
 
-    $sessionBootstrap = __DIR__ . '/config/session-start.php';
-    if (is_file($sessionBootstrap)) {
-        require_once $sessionBootstrap;
-        if (session_status() === PHP_SESSION_ACTIVE) {
-            return;
-        }
-    }
-
-    if (isset($_COOKIE['PHPSESSID']) && $_COOKIE['PHPSESSID'] !== '') {
-        @session_id($_COOKIE['PHPSESSID']);
+    // Use the incoming session cookie directly; do not rely on session-start.php
+    // because it may fail when headers were already touched in some deployments.
+    $sessionName = session_name();
+    $incomingId = $_COOKIE[$sessionName] ?? $_COOKIE['PHPSESSID'] ?? '';
+    if ($incomingId !== '') {
+        @session_id($incomingId);
     }
     @session_cache_limiter('');
     @session_start();
@@ -133,6 +128,7 @@ function bootstrapRequireAuth(): void {
 
     if (!isset($_SESSION['user_id']) && !isset($_SESSION['user'])) {
         $hasCookie = isset($_COOKIE[session_name()]) || isset($_COOKIE['PHPSESSID']);
+        bootstrapApplyHeaders();
         jsonError('Unauthorized', 401, [
             'hint' => $hasCookie
                 ? 'Session cookie arrived but PHP session has no login data — try logging out and back in.'
@@ -140,6 +136,8 @@ function bootstrapRequireAuth(): void {
             'session_id' => session_id(),
             'session_status' => session_status(),
             'cookie_name' => session_name(),
+            'cookie_session_name_present' => isset($_COOKIE[session_name()]),
+            'cookie_php_sessid_present' => isset($_COOKIE['PHPSESSID']),
             'has_cookie' => $hasCookie,
             'cookie_len' => isset($_COOKIE['PHPSESSID'])
                 ? strlen((string)$_COOKIE['PHPSESSID'])
