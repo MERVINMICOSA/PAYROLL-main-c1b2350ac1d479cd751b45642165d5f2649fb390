@@ -10,24 +10,26 @@ if (ob_get_level() === 0) {
     ob_start();
 }
 
-// Always return JSON
-if (!headers_sent()) {
+function bootstrapApplyHeaders(): void {
+    if (headers_sent()) {
+        return;
+    }
+    $origin = $_SERVER['HTTP_ORIGIN'] ?? '';
+    $allowedOrigins = [
+        'https://philtech-payroll.onrender.com',
+        'https://payroll-main-1.onrender.com',
+    ];
+    $isLocal = strpos($origin, 'http://localhost') === 0 || strpos($origin, 'http://127.0.0.1') === 0;
+    if ($origin !== '' && ($isLocal || in_array($origin, $allowedOrigins, true))) {
+        header("Access-Control-Allow-Origin: $origin");
+    } elseif ($origin === '') {
+        // Non-browser or same-origin requests without explicit Origin header.
+        header("Access-Control-Allow-Origin: https://payroll-main-1.onrender.com");
+    }
     header("Content-Type: application/json; charset=utf-8");
-}
-
-// Security headers (optional but good)
-if (!headers_sent()) {
-    header("Access-Control-Allow-Origin: https://philtech-payroll.onrender.com");
     header("Access-Control-Allow-Credentials: true");
     header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
     header("Access-Control-Allow-Headers: Content-Type");
-}
-
-// Handle preflight globally
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-    http_response_code(200);
-    echo json_encode(["success" => true]);
-    exit;
 }
 
 // Convert ALL PHP errors into exceptions
@@ -66,6 +68,7 @@ register_shutdown_function(function () {
 
 // Safe JSON responder
 function jsonResponse($data, $status = 200) {
+    bootstrapApplyHeaders();
     http_response_code($status);
     echo json_encode([
         "success" => $status >= 200 && $status < 300,
@@ -76,6 +79,7 @@ function jsonResponse($data, $status = 200) {
 
 // Safe error responder
 function jsonError($message, $status = 500, $details = null) {
+    bootstrapApplyHeaders();
     http_response_code($status);
     echo json_encode([
         "success" => false,
@@ -86,18 +90,30 @@ function jsonError($message, $status = 500, $details = null) {
 }
 
 function bootstrapStartSession(): void {
+    bootstrapApplyHeaders();
+
+    if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+        http_response_code(200);
+        echo json_encode(["success" => true]);
+        exit;
+    }
+
     if (session_status() === PHP_SESSION_ACTIVE) {
         return;
     }
 
-    if (isset($_COOKIE['PHPSESSID']) && $_COOKIE['PHPSESSID'] !== '') {
-        // Suppress warning text; keep cookie-bound session continuity.
-        @session_id($_COOKIE['PHPSESSID']);
+    $sessionBootstrap = __DIR__ . '/config/session-start.php';
+    if (is_file($sessionBootstrap)) {
+        require_once $sessionBootstrap;
+        if (session_status() === PHP_SESSION_ACTIVE) {
+            return;
+        }
     }
 
-    // Avoid cache-limiter header warnings when output already started.
+    if (isset($_COOKIE['PHPSESSID']) && $_COOKIE['PHPSESSID'] !== '') {
+        @session_id($_COOKIE['PHPSESSID']);
+    }
     @session_cache_limiter('');
-    // Suppress runtime warning text; errors are still logged via log_errors.
     @session_start();
 }
 
