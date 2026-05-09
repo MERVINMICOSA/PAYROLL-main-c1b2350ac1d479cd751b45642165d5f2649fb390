@@ -2020,6 +2020,9 @@ if (config.hasDynamicDates) {
                     // Reload the tab data to show updated values
                     await loadTabData();
                 } else {
+                    const errorText = await response.text();
+                    console.error(`Save failed on ${currentTab}:`, response.status, errorText);
+                    showError(`Save failed (${response.status}). Check console for details.`);
                     indicator.innerHTML = '<i class="fa-solid fa-circle-exclamation"></i> Save failed';
                     indicator.style.background = '#ef4444';
                     setTimeout(() => indicator.remove(), 2000);

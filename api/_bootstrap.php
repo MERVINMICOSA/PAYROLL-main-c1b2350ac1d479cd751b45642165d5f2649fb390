@@ -90,16 +90,19 @@ function bootstrapStartSession(): void {
         return;
     }
 
-    if (!headers_sent() && isset($_COOKIE['PHPSESSID']) && $_COOKIE['PHPSESSID'] !== '') {
-        session_id($_COOKIE['PHPSESSID']);
+    if (isset($_COOKIE['PHPSESSID']) && $_COOKIE['PHPSESSID'] !== '') {
+        // Suppress warning text; keep cookie-bound session continuity.
+        @session_id($_COOKIE['PHPSESSID']);
     }
 
+    // Avoid cache-limiter header warnings when output already started.
+    @session_cache_limiter('');
     // Suppress runtime warning text; errors are still logged via log_errors.
     @session_start();
 }
 
 function bootstrapRequireAuth(): void {
-    if (empty($_SESSION['user_id'])) {
+    if (!isset($_SESSION['user_id'])) {
         jsonError('Unauthorized', 401);
     }
 }
