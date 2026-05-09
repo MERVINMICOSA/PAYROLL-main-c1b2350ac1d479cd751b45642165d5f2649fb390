@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 declare(strict_types=1);
 
 /* =========================
@@ -53,7 +53,7 @@ try {
         throw new Exception("Invalid DB config");
     }
 
-    $dsn = "pgsql:host=$host;port=$port;dbname=$dbname;sslmode=require";
+    $dsn = "pgsql:host=$host;port=$port;dbname=$dbname";
 
     $pdo = new PDO($dsn, $user, $pass, [
         PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
