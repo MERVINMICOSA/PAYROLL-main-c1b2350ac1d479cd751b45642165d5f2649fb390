@@ -7,7 +7,7 @@ bootstrapRequireAuth();
 /* =========================
    DB CONNECTION
 ========================= */
-$pdo = bootstrapGetPdo('');
+$pdo = bootstrapGetPdo('require');
 
 /* =========================
    TABLES

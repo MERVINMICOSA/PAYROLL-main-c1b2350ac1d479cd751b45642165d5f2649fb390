@@ -1,16 +1,22 @@
 <?php
 
 // Prevent any output corruption
-ob_start();
+if (ob_get_level() === 0) {
+    ob_start();
+}
 
 // Always return JSON
-header("Content-Type: application/json; charset=utf-8");
+if (!headers_sent()) {
+    header("Content-Type: application/json; charset=utf-8");
+}
 
 // Security headers (optional but good)
-header("Access-Control-Allow-Origin: https://philtech-payroll.onrender.com");
-header("Access-Control-Allow-Credentials: true");
-header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
-header("Access-Control-Allow-Headers: Content-Type");
+if (!headers_sent()) {
+    header("Access-Control-Allow-Origin: https://philtech-payroll.onrender.com");
+    header("Access-Control-Allow-Credentials: true");
+    header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
+    header("Access-Control-Allow-Headers: Content-Type");
+}
 
 // Handle preflight globally
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {

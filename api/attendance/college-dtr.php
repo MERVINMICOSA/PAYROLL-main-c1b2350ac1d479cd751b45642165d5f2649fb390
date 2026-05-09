@@ -4,7 +4,7 @@ require_once __DIR__ . '/../_bootstrap.php';
 bootstrapStartSession();
 bootstrapRequireAuth();
 
-$pdo = bootstrapGetPdo('');
+$pdo = bootstrapGetPdo('require');
 
 $pdo->exec("
     CREATE TABLE IF NOT EXISTS attendance_college_dtr (
