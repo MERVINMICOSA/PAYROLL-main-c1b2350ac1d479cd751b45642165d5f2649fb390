@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Philtech GMA | View Employee</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Security Scripts -->
+    <script src="js/csrf.js"></script>
+    <script src="js/xss-protection.js"></script>
+    <script src="js/secure-ajax.js"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #dcd3b8; }
+        .detail-card { transition: all 0.3s ease; }
+        .detail-card:hover { transform: translateY(-2px); box-shadow: 0 10px 25px -5px rgba(176, 48, 59, 0.1); }
+        /* Add to existing style section */
+        .group:hover .group-hover\:block {
+            display: block !important;
+        }
+
+        .user-dropdown {
+            position: absolute;
+            right: 0;
+            margin-top: 0.5rem;
+            width: 12rem;
+            background-color: white;
+            border-radius: 0.5rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            padding: 0.5rem 0;
+            z-index: 50;
+            display: none;
+        }
+
+        .group:hover .user-dropdown {
+            display: block;
+        }
+    </style>
+</head>
+<body class="text-gray-700 antialiased min-h-screen">
+
+    <!-- Top Navigation Bar -->
+    <nav class="bg-[#8a1f27] text-white px-6 py-3 flex justify-between items-center sticky top-0 z-50 shadow-md">
+        <div class="flex items-center gap-2">
+            <div class="w-8 h-8 bg-[#b0303b] rounded-lg flex items-center justify-center">
+                <i class="fa-solid fa-file-invoice text-[#f4e8c1]"></i>
+            </div>
+            <span class="font-bold text-lg">Philtech GMA</span>
+        </div>
+        
+        <div class="hidden md:flex items-center gap-1">
+            <a href="dashboard.html" class="nav-link px-4 py-2 rounded-lg hover:bg-[#d98989] transition-colors font-medium">Dashboard</a>
+            <a href="employees.html" class="nav-link px-4 py-2 rounded-lg hover:bg-[#d98989] transition-colors font-medium">Employees</a>
+            <a href="payroll.html" class="nav-link px-4 py-2 rounded-lg hover:bg-[#d98989] transition-colors font-medium">Payroll</a>
+            <a href="attendance.html" class="nav-link px-4 py-2 rounded-lg hover:bg-[#d98989] transition-colors font-medium">Attendance</a>
+            <a href="settings.html" class="nav-link px-4 py-2 rounded-lg hover:bg-[#d98989] transition-colors font-medium">Settings</a>
+        </div>
+        
+        <div class="flex items-center gap-3">
+            <span class="text-sm hidden sm:block" id="userName">Accountant</span>
+            <div class="relative group">
+                <img src="https://i.pravatar.cc/150?u=accountant" class="w-8 h-8 rounded-full border-2 border-white cursor-pointer">
+                <div class="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg py-1 hidden group-hover:block z-50">
+                    <a href="#" onclick="logout()" class="block px-4 py-2 text-sm text-red-600 hover:bg-gray-100">Logout</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="p-6 md:p-8 max-w-5xl mx-auto">
+        
+        <!-- Header -->
+        <div class="flex justify-between items-center mb-6">
+            <div>
+                <h1 class="text-2xl font-bold text-[#8a1f27]">Employee Details</h1>
+                <p class="text-gray-500 text-sm mt-1" id="currentDate"></p>
+            </div>
+            <div class="flex gap-2">
+                <button onclick="editEmployee()" class="bg-[#b0303b] text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-[#8a1f27] transition-colors shadow-md flex items-center gap-2">
+                    <i class="fa-regular fa-pen-to-square"></i> Edit
+                </button>
+                <button onclick="goBack()" class="bg-white px-4 py-2 rounded-lg text-sm font-medium shadow-sm hover:shadow-md transition-colors flex items-center gap-2">
+                    <i class="fa-solid fa-arrow-left"></i> Back
+                </button>
+            </div>
+        </div>
+
+        <!-- Employee Profile Card -->
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+            <!-- Profile Header -->
+            <div class="bg-gradient-to-r from-[#b0303b] to-[#8a1f27] px-8 py-6 text-white">
+                <div class="flex items-center gap-6">
+                    <div class="w-20 h-20 bg-white/20 rounded-full flex items-center justify-center text-3xl">
+                        <i class="fa-regular fa-user"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-2xl font-bold" id="fullName">Loading...</h2>
+                        <p class="text-white/90 text-sm mt-1" id="position">-</p>
+                        <div class="flex items-center gap-3 mt-2">
+                            <span class="px-3 py-1 bg-white/20 rounded-full text-xs" id="employeeId">-</span>
+                            <span class="px-3 py-1 bg-white/20 rounded-full text-xs" id="status">-</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Details Grid -->
+            <div class="p-8">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <!-- Personal Information -->
+                    <div class="space-y-4">
+                        <h3 class="text-lg font-semibold text-gray-800 flex items-center gap-2">
+                            <i class="fa-regular fa-user text-[#b0303b]"></i> Personal Information
+                        </h3>
+                        <div class="bg-gray-50 p-4 rounded-xl space-y-3">
+                            <div class="flex justify-between">
+                                <span class="text-gray-500">Full Name:</span>
+                                <span class="font-medium" id="viewFullName">-</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-500">Email:</span>
+                                <span class="font-medium" id="email">-</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-500">Phone:</span>
+                                <span class="font-medium" id="phone">-</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-500">Birth Date:</span>
+                                <span class="font-medium" id="birthDate">-</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Employment Details -->
+                    <div class="space-y-4">
+                        <h3 class="text-lg font-semibold text-gray-800 flex items-center gap-2">
+                            <i class="fa-solid fa-briefcase text-[#b0303b]"></i> Employment Details
+                        </h3>
+                        <div class="bg-gray-50 p-4 rounded-xl space-y-3">
+                            <div class="flex justify-between">
+                                <span class="text-gray-500">Position:</span>
+                                <span class="font-medium" id="viewPosition">-</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-500">Department:</span>
+                                <span class="font-medium" id="department">-</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-500">Employment Type:</span>
+                                <span class="font-medium" id="employmentType">-</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-500">Hire Date:</span>
+                                <span class="font-medium" id="hireDate">-</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Compensation -->
+                    <div class="space-y-4">
+                        <h3 class="text-lg font-semibold text-gray-800 flex items-center gap-2">
+                            <i class="fa-solid fa-money-bill-wave text-[#b0303b]"></i> Compensation
+                        </h3>
+                        <div class="bg-gray-50 p-4 rounded-xl space-y-3">
+                            <div class="flex justify-between">
+                                <span class="text-gray-500">Base Salary:</span>
+                                <span class="font-medium text-[#b0303b]" id="baseSalary">₱0</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-500">Hourly Rate:</span>
+                                <span class="font-medium" id="hourlyRate">₱0</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-500">Admin Pay Rate:</span>
+                                <span class="font-medium" id="adminPayRate">₱0</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Government Numbers -->
+                    <div class="space-y-4">
+                        <h3 class="text-lg font-semibold text-gray-800 flex items-center gap-2">
+                            <i class="fa-solid fa-id-card text-[#b0303b]"></i> Government Numbers
+                        </h3>
+                        <div class="bg-gray-50 p-4 rounded-xl space-y-3">
+                            <div class="flex justify-between">
+                                <span class="text-gray-500">SSS:</span>
+                                <span class="font-medium" id="sss">-</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-500">PhilHealth:</span>
+                                <span class="font-medium" id="philhealth">-</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-500">Pag-IBIG:</span>
+                                <span class="font-medium" id="pagibig">-</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-500">TIN:</span>
+                                <span class="font-medium" id="tin">-</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Emergency Contact -->
+                    <div class="md:col-span-2 space-y-4">
+                        <h3 class="text-lg font-semibold text-gray-800 flex items-center gap-2">
+                            <i class="fa-solid fa-phone text-[#b0303b]"></i> Emergency Contact
+                        </h3>
+                        <div class="bg-gray-50 p-4 rounded-xl grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div>
+                                <span class="text-gray-500 block text-sm">Contact Person</span>
+                                <span class="font-medium" id="emergencyName">-</span>
+                            </div>
+                            <div>
+                                <span class="text-gray-500 block text-sm">Relationship</span>
+                                <span class="font-medium" id="emergencyRelation">-</span>
+                            </div>
+                            <div>
+                                <span class="text-gray-500 block text-sm">Phone</span>
+                                <span class="font-medium" id="emergencyPhone">-</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </main>
+
+    <script src="js/database.js"></script>
+    <script src="js/navigation.js"></script>
+    <script>
+        let employeeId = null;
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            document.getElementById('currentDate').textContent = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+            
+            // Get employee ID from URL
+            const urlParams = new URLSearchParams(window.location.search);
+            employeeId = parseInt(urlParams.get('id'));
+            
+            if (!employeeId) {
+                alert('Employee ID not provided');
+                window.location.href = 'employees.html';
+                return;
+            }
+            
+            await loadEmployeeData();
+        });
+
+        async function loadEmployeeData() {
+            try {
+                const response = await fetch(`/api/employee.php?id=${employeeId}`, {
+                    credentials: 'include'
+                });
+                
+                if (!response.ok) {
+                    if (response.status === 401) {
+                        window.location.href = 'index.html';
+                        return;
+                    }
+                    throw new Error('Failed to fetch employee');
+                }
+                
+                const employee = await response.json();
+                
+                if (!employee || employee.error) {
+                    alert('Employee not found');
+                    window.location.href = 'employees.html';
+                    return;
+                }
+                
+                // Populate all fields
+                document.getElementById('fullName').textContent = employee.full_name || 'N/A';
+                document.getElementById('viewFullName').textContent = employee.full_name || 'N/A';
+                document.getElementById('position').textContent = employee.position || 'N/A';
+                document.getElementById('viewPosition').textContent = employee.position || 'N/A';
+                document.getElementById('employeeId').textContent = employee.employee_id || `EMP${employee.id}`;
+                
+                const statusSpan = document.getElementById('status');
+                statusSpan.textContent = employee.status || 'Active';
+                statusSpan.className = employee.status === 'Active' ? 'px-3 py-1 bg-white/20 rounded-full text-xs' : 'px-3 py-1 bg-red-500/20 rounded-full text-xs';
+                
+                document.getElementById('email').textContent = employee.email || 'N/A';
+                document.getElementById('phone').textContent = employee.phone || 'N/A';
+                document.getElementById('birthDate').textContent = employee.birth_date ? new Date(employee.birth_date).toLocaleDateString() : 'N/A';
+                document.getElementById('department').textContent = employee.department || 'N/A';
+                document.getElementById('employmentType').textContent = employee.employment_type || 'N/A';
+                document.getElementById('hireDate').textContent = employee.hire_date ? new Date(employee.hire_date).toLocaleDateString() : 'N/A';
+                
+                document.getElementById('baseSalary').textContent = '₱' + (employee.base_salary || 0).toLocaleString();
+                document.getElementById('hourlyRate').textContent = '₱' + (employee.hourly_rate || 0).toLocaleString();
+                document.getElementById('adminPayRate').textContent = '₱' + (employee.admin_pay_rate || 0).toLocaleString();
+                
+                document.getElementById('sss').textContent = employee.sss || 'N/A';
+                document.getElementById('philhealth').textContent = employee.philhealth || 'N/A';
+                document.getElementById('pagibig').textContent = employee.pagibig || 'N/A';
+                document.getElementById('tin').textContent = employee.tin || 'N/A';
+                
+                document.getElementById('emergencyName').textContent = employee.emergency_name || 'N/A';
+                document.getElementById('emergencyRelation').textContent = employee.emergency_relation || 'N/A';
+                document.getElementById('emergencyPhone').textContent = employee.emergency_phone || 'N/A';
+                
+            } catch (error) {
+                console.error('Error loading employee:', error);
+                alert('Error loading employee data');
+            }
+        }
+
+        function editEmployee() {
+            window.location.href = `edit-employee.html?id=${employeeId}`;
+        }
+
+        function goBack() {
+            window.location.href = 'employees.html';
+        }
+    </script>
+</body>
+</html>

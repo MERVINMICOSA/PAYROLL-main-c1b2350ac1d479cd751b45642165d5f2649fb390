@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Philtech GMA | Add Attendance</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Security Scripts -->
+    <script src="js/csrf.js"></script>
+    <script src="js/xss-protection.js"></script>
+    <script src="js/secure-ajax.js"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #dcd3b8; }
+
+        /* Add to existing style section */
+        .group:hover .group-hover\:block {
+            display: block !important;
+        }
+
+        .user-dropdown {
+            position: absolute;
+            right: 0;
+            margin-top: 0.5rem;
+            width: 12rem;
+            background-color: white;
+            border-radius: 0.5rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            padding: 0.5rem 0;
+            z-index: 50;
+            display: none;
+        }
+
+        .group:hover .user-dropdown {
+            display: block;
+        }
+    </style>
+</head>
+<body class="text-gray-700 antialiased min-h-screen">
+
+    <!-- Top Navigation Bar -->
+    <nav class="bg-[#8a1f27] text-white px-6 py-3 flex justify-between items-center sticky top-0 z-50 shadow-md">
+        <div class="flex items-center gap-2">
+            <div class="w-8 h-8 bg-[#b0303b] rounded-lg flex items-center justify-center">
+                <i class="fa-solid fa-file-invoice text-[#f4e8c1]"></i>
+            </div>
+            <span class="font-bold text-lg">Philtech GMA</span>
+        </div>
+        
+        <div class="hidden md:flex items-center gap-1">
+            <a href="dashboard.html" class="nav-link px-4 py-2 rounded-lg hover:bg-[#d98989] transition-colors font-medium">Dashboard</a>
+            <a href="employees.html" class="nav-link px-4 py-2 rounded-lg hover:bg-[#d98989] transition-colors font-medium">Employees</a>
+            <a href="payroll.html" class="nav-link px-4 py-2 rounded-lg hover:bg-[#d98989] transition-colors font-medium">Payroll</a>
+            <a href="attendance.html" class="nav-link px-4 py-2 rounded-lg hover:bg-[#d98989] transition-colors font-medium">Attendance</a>
+            <a href="settings.html" class="nav-link px-4 py-2 rounded-lg hover:bg-[#d98989] transition-colors font-medium">Settings</a>
+        </div>
+        
+        <div class="flex items-center gap-3">
+            <span class="text-sm hidden sm:block" id="userName">Accountant</span>
+            <div class="relative group">
+                <img src="https://i.pravatar.cc/150?u=accountant" class="w-8 h-8 rounded-full border-2 border-white cursor-pointer">
+                <div class="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg py-1 hidden group-hover:block z-50">
+                    <a href="#" onclick="logout()" class="block px-4 py-2 text-sm text-red-600 hover:bg-gray-100">Logout</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="p-6 md:p-8 max-w-4xl mx-auto">
+        
+        <!-- Header -->
+        <div class="flex justify-between items-center mb-6">
+            <div>
+                <h1 class="text-2xl font-bold text-[#8a1f27]">Add Attendance Record</h1>
+                <p class="text-gray-500 text-sm mt-1" id="currentDate"></p>
+            </div>
+            <button onclick="goBack()" class="bg-white px-4 py-2 rounded-lg text-sm font-medium shadow-sm hover:shadow-md transition-shadow flex items-center gap-2">
+                <i class="fa-solid fa-arrow-left"></i> Back
+            </button>
+        </div>
+
+        <!-- Form Card -->
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-8">
+            <form id="attendanceForm" class="space-y-6">
+                <!-- Employee Selection -->
+                <div>
+                    <h2 class="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                        <i class="fa-regular fa-user text-[#b0303b]"></i> Employee Information
+                    </h2>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Select Employee <span class="text-red-500">*</span></label>
+                            <select id="employeeSelect" required class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#b0303b] focus:border-transparent">
+                                <option value="">-- Select Employee --</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Payroll Period</label>
+                            <input type="text" id="payrollPeriod" readonly 
+                                class="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg"
+                                placeholder="Auto-generated from date">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Attendance Details -->
+                <div class="pt-4 border-t border-gray-100">
+                    <h2 class="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                        <i class="fa-regular fa-calendar-check text-[#b0303b]"></i> Attendance Details
+                    </h2>
+                    
+                    <!-- Daily Entry -->
+                    <div class="bg-gray-50 p-4 rounded-lg mb-4">
+                        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Date <span class="text-red-500">*</span></label>
+                                <input type="date" id="entryDate" required 
+                                    class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#b0303b] focus:border-transparent">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Time In</label>
+                                <input type="time" id="timeIn" 
+                                    class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#b0303b] focus:border-transparent">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Time Out</label>
+                                <input type="time" id="timeOut" 
+                                    class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#b0303b] focus:border-transparent">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Hours Worked</label>
+                                <input type="number" id="hoursWorked" step="0.5" min="0" max="24"
+                                    class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#b0303b] focus:border-transparent"
+                                    placeholder="8.0">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Overtime and Pay Type -->
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Overtime Hours</label>
+                            <input type="number" id="overtimeHours" step="0.5" min="0" value="0"
+                                class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#b0303b] focus:border-transparent">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Pay Type</label>
+                            <select id="payType" class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#b0303b] focus:border-transparent">
+                                <option value="regular">Regular Pay</option>
+                                <option value="admin">Admin Pay</option>
+                                <option value="holiday">Holiday Pay</option>
+                                <option value="overtime">Overtime Pay</option>
+                            </select>
+                        </div>
+                        <div id="adminPayRateContainer">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Admin Pay Rate (₱/hr)</label>
+                            <input type="number" id="adminPayRate" step="0.01" min="0"
+                                class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#b0303b] focus:border-transparent"
+                                placeholder="0.00">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Notes -->
+                <div class="pt-4 border-t border-gray-100">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Notes (Optional)</label>
+                    <textarea id="notes" rows="3" 
+                        class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#b0303b] focus:border-transparent"
+                        placeholder="Add any additional notes..."></textarea>
+                </div>
+
+                <!-- Form Actions -->
+                <div class="flex justify-end gap-3 pt-4 border-t border-gray-100">
+                    <button type="button" onclick="goBack()" class="px-6 py-2 border border-gray-200 rounded-lg font-medium hover:bg-gray-50 transition-colors">
+                        Cancel
+                    </button>
+                    <button type="submit" class="px-6 py-2 bg-[#b0303b] text-white rounded-lg font-medium hover:bg-[#8a1f27] transition-colors shadow-md">
+                        Save Attendance
+                    </button>
+                </div>
+            </form>
+        </div>
+    </main>
+
+    <script src="js/database.js"></script>
+    <script src="js/navigation.js"></script>
+    <script>
+        let employees = [];
+        let selectedEmployeeId = null;
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            await Database.ensureDatabaseReady();
+            document.getElementById('currentDate').textContent = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+            
+            // Load employees for dropdown
+            employees = await Database.getAllEmployees();
+            const select = document.getElementById('employeeSelect');
+            employees.forEach(emp => {
+                select.innerHTML += `<option value="${emp.id}">${emp.full_name} - ${emp.position}</option>`;
+            });
+
+            // Auto-calculate hours worked when time in/out changes
+            document.getElementById('timeIn').addEventListener('change', calculateHours);
+            document.getElementById('timeOut').addEventListener('change', calculateHours);
+            
+            // Auto-generate payroll period from date
+            document.getElementById('entryDate').addEventListener('change', function() {
+                const date = new Date(this.value);
+                if (date) {
+                    const month = date.toLocaleDateString('en-US', { month: 'long' });
+                    const year = date.getFullYear();
+                    document.getElementById('payrollPeriod').value = `${month} ${year}`;
+                }
+            });
+
+            // Toggle admin pay rate visibility
+            document.getElementById('payType').addEventListener('change', function() {
+                const container = document.getElementById('adminPayRateContainer');
+                if (this.value === 'admin') {
+                    container.style.display = 'block';
+                } else {
+                    container.style.display = 'none';
+                    document.getElementById('adminPayRate').value = '';
+                }
+            });
+            
+            // Get employee_id from URL if provided
+            const urlParams = new URLSearchParams(window.location.search);
+            const employeeId = urlParams.get('employee_id');
+            if (employeeId) {
+                document.getElementById('employeeSelect').value = employeeId;
+            }
+        });
+
+        function calculateHours() {
+            const timeIn = document.getElementById('timeIn').value;
+            const timeOut = document.getElementById('timeOut').value;
+            
+            if (timeIn && timeOut) {
+                const [inHour, inMin] = timeIn.split(':').map(Number);
+                const [outHour, outMin] = timeOut.split(':').map(Number);
+                
+                let hours = outHour - inHour + (outMin - inMin) / 60;
+                if (hours < 0) hours += 24; // Cross midnight
+                
+                document.getElementById('hoursWorked').value = hours.toFixed(1);
+            }
+        }
+
+        document.getElementById('attendanceForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            try {
+                const employeeId = parseInt(document.getElementById('employeeSelect').value);
+                if (!employeeId) {
+                    alert('Please select an employee');
+                    return;
+                }
+
+                const date = document.getElementById('entryDate').value;
+                if (!date) {
+                    alert('Please select a date');
+                    return;
+                }
+
+                // Check if attendance already exists for this employee on this date
+                const allAttendance = await Database.getAllAttendance();
+                const existing = allAttendance.find(a => 
+                    a.employee_id === employeeId && 
+                    (a.attendance_date === date || a.date === date)
+                );
+
+                if (existing) {
+                    if (!confirm('Attendance record already exists for this date. Do you want to update it?')) {
+                        return;
+                    }
+                    // Update existing logic would go here
+                }
+
+                const newId = allAttendance.length > 0 ? Math.max(...allAttendance.map(a => a.id)) + 1 : 1;
+                
+                const attendance = {
+                    id: newId,
+                    employee_id: employeeId,
+                    attendance_date: date,
+                    date: date,
+                    time_in: document.getElementById('timeIn').value,
+                    time_out: document.getElementById('timeOut').value,
+                    hours_worked: parseFloat(document.getElementById('hoursWorked').value) || 8,
+                    overtime_hours: parseFloat(document.getElementById('overtimeHours').value) || 0,
+                    pay_type: document.getElementById('payType').value,
+                    admin_pay_rate: parseFloat(document.getElementById('adminPayRate').value) || 0,
+                    notes: document.getElementById('notes').value,
+                    payroll_period: document.getElementById('payrollPeriod').value,
+                    created_at: new Date().toISOString()
+                };
+
+                await Database.addAttendance(attendance);
+                alert('Attendance record added successfully!');
+                window.location.href = 'attendance.html';
+            } catch (error) {
+                console.error('Error adding attendance:', error);
+                alert('Error adding attendance. Please try again.');
+            }
+        });
+
+        function goBack() {
+            window.location.href = 'attendance.html';
+        }
+    </script>
+</body>
+</html>

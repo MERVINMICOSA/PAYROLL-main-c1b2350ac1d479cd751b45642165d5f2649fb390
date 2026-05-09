@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Add Attendance</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <link rel="stylesheet" href="css/global.css">
+    <link rel="stylesheet" href="css/add-attendance.css">
+    <!-- Security Scripts -->
+    <script src="js/csrf.js"></script>
+    <script src="js/xss-protection.js"></script>
+    <script src="js/secure-ajax.js"></script>
+    <style>
+        .daily-attendance-section {
+            margin-top: 20px;
+            padding: 20px;
+            background: rgba(232, 215, 159, 0.3);
+            border-radius: 15px;
+        }
+        
+        .daily-attendance-section h3 {
+            color: #b0303b;
+            margin-top: 0;
+        }
+        
+        .daily-entry {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            margin-bottom: 10px;
+            flex-wrap: wrap;
+        }
+        
+        .daily-entry input {
+            padding: 10px;
+            border-radius: 10px;
+            border: none;
+            background: #e8d79f;
+            font-size: 14px;
+        }
+        
+        .daily-entry input[type="date"] {
+            flex: 1;
+            min-width: 150px;
+        }
+        
+        .daily-entry input[type="time"] {
+            width: 100px;
+        }
+        
+        .btn-add-day {
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 10px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        
+        .btn-remove-day {
+            background: #dc3545;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 10px;
+            cursor: pointer;
+        }
+        
+        .employee-info {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        
+        .employee-info h3 {
+            color: white;
+            font-size: 24px;
+            margin: 0;
+        }
+        
+        .hours-inputs {
+            display: flex;
+            gap: 15px;
+            margin-top: 15px;
+        }
+        
+        .hours-inputs .form-group {
+            flex: 1;
+        }
+        
+        .hours-inputs label {
+            display: block;
+            color: #b0303b;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .hours-inputs input {
+            width: 100%;
+            padding: 10px;
+            border-radius: 10px;
+            border: none;
+            background: #e8d79f;
+            font-size: 14px;
+            box-sizing: border-box;
+        }
+
+        /* Add to existing style section */
+        .group:hover .group-hover\:block {
+            display: block !important;
+        }
+
+        .user-dropdown {
+            position: absolute;
+            right: 0;
+            margin-top: 0.5rem;
+            width: 12rem;
+            background-color: white;
+            border-radius: 0.5rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            padding: 0.5rem 0;
+            z-index: 50;
+            display: none;
+        }
+
+        .group:hover .user-dropdown {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+
+<header class="top-bar">
+    <div class="logo-section">
+        <img src="assets/images/logo.png" class="logo" alt="Logo">
+        <h1>Philtech GMA</h1>
+    </div>
+
+    <button class="back-btn" onclick="go('attendanceSadmin.html')">←</button>
+</header>
+
+<main class="form-wrapper">
+
+    <div class="form-card">
+
+        <div class="avatar-circle">👤</div>
+
+        <h2>Add Attendance</h2>
+
+        <form id="attendanceForm">
+
+            <input type="hidden" id="selectedEmployeeId">
+
+            <div class="employee-info">
+                <h3 id="employeeName">Select Employee</h3>
+            </div>
+
+            <div class="pay-type-section" style="margin-bottom: 20px; padding: 15px; background: rgba(232, 215, 159, 0.3); border-radius: 10px;">
+                <label style="display: block; color: #b0303b; font-weight: bold; margin-bottom: 10px;">Pay Type:</label>
+                <div style="display: flex; gap: 20px; margin-bottom: 15px;">
+                    <label style="display: flex; align-items: center; gap: 5px; cursor: pointer;">
+                        <input type="radio" name="payType" value="regular" checked style="width: auto;" onchange="toggleAdminPayRate()">
+                        <span>Regular Pay</span>
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 5px; cursor: pointer;">
+                        <input type="radio" name="payType" value="admin" style="width: auto;" onchange="toggleAdminPayRate()">
+                        <span>Admin Pay</span>
+                    </label>
+                </div>
+                <div id="adminPayRateContainer" style="display: none;">
+                    <label style="display: block; color: #b0303b; font-weight: bold; margin-bottom: 5px;">Admin Pay Rate (per hour):</label>
+                    <input type="number" id="adminPayRate" placeholder="Enter admin pay rate" min="0" step="0.01" style="padding: 10px; border-radius: 10px; border: none; background: #e8d79f; font-size: 14px; width: 200px;">
+                </div>
+            </div>
+
+            <div class="daily-attendance-section">
+                <h3>Daily Attendance (Hours Worked & Overtime)</h3>
+                <div id="dailyEntries">
+                    <!-- Daily entries will be added here -->
+                </div>
+            </div>
+
+            <div class="form-buttons">
+                <button type="submit" class="save-btn">Save</button>
+                <button type="button" class="cancel-btn" onclick="go('attendanceSadmin.html')">Cancel</button>
+            </div>
+
+        </form>
+
+    </div>
+
+</main>
+<script src="js/api-integration.js"></script>
+<script src="js/database.js"></script>
+<script src="js/navigation.js"></script>
+<script src="js/add-attendanceSadmin.js"></script>
+</body>
+</html>

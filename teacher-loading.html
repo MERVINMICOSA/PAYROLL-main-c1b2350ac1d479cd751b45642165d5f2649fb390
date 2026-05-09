@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Philtech GMA | Teacher Loading</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Security Scripts -->
+    <script src="js/csrf.js"></script>
+    <script src="js/xss-protection.js"></script>
+    <script src="js/secure-ajax.js"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #dcd3b8; }
+        .nav-link.active { background-color: #b0303b; color: white; }
+        .loading-tab { transition: all 0.3s ease; border-bottom: 3px solid transparent; padding: 12px 20px; font-weight: 500; cursor: pointer; }
+        .loading-tab.active { border-bottom-color: #b0303b; color: #b0303b; font-weight: 600; background: rgba(176, 48, 59, 0.05); }
+        .grid-container { overflow-x: auto; border-radius: 12px; border: 1px solid #e5e7eb; background: white; }
+        .loading-grid { display: grid; min-width: max-content; }
+        .grid-header { background-color: #f9fafb; font-weight: 600; color: #374151; padding: 14px 12px; border-bottom: 2px solid #e5e7eb; border-right: 1px solid #e5e7eb; text-align: center; }
+        .grid-row { display: contents; }
+        .grid-cell { padding: 12px 8px; border-right: 1px solid #e5e7eb; border-bottom: 1px solid #e5e7eb; text-align: center; }
+        .grid-cell.name-cell { position: sticky; left: 0; background: white; font-weight: 500; text-align: left; padding-left: 16px; min-width: 200px; }
+        .grid-cell input { width: 100%; text-align: center; border: 1px solid #e5e7eb; border-radius: 6px; padding: 6px; outline: none; }
+        .grid-cell input:focus { border-color: #b0303b; }
+        .total-cell { background-color: #f9fafb; font-weight: 600; color: #b0303b; }
+    </style>
+</head>
+<body class="text-gray-700 antialiased min-h-screen">
+
+    <nav class="bg-[#8a1f27] text-white px-6 py-3 flex justify-between items-center sticky top-0 z-50 shadow-md">
+        <div class="flex items-center gap-2"><div class="w-8 h-8 bg-[#b0303b] rounded-lg flex items-center justify-center"><i class="fa-solid fa-chalkboard-user text-[#f4e8c1]"></i></div><span class="font-bold text-lg">Philtech GMA</span></div>
+        <div class="hidden md:flex items-center gap-1">
+            <a href="dashboard-oic.html" class="nav-link px-4 py-2 rounded-lg hover:bg-[#d98989] transition-colors font-medium">Dashboard</a>
+            <a href="teacher-loading.html" class="nav-link active px-4 py-2 rounded-lg bg-[#b0303b] text-white font-medium">Teacher Loading</a>
+        </div>
+        <div class="flex items-center gap-3"><span class="text-sm hidden sm:block" id="userName">OIC Head</span><div class="relative group"><img src="https://i.pravatar.cc/150?u=oic" class="w-8 h-8 rounded-full border-2 border-white cursor-pointer"><div class="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg py-1 hidden group-hover:block z-50"><a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Profile</a><a href="#" onclick="logout()" class="block px-4 py-2 text-sm text-red-600 hover:bg-gray-100">Logout</a></div></div></div>
+    </nav>
+
+    <main class="p-6 md:p-8 max-w-7xl mx-auto">
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4"><div><h1 class="text-2xl font-bold text-[#8a1f27]">Teacher Loading</h1><p class="text-gray-500 text-sm mt-1">Assign subjects, hours, and rates per teacher</p></div>
+        <div class="flex items-center gap-3"><select id="semesterSelect" class="border border-gray-200 rounded-lg px-4 py-2 text-sm"><option value="1st Sem">1st Semester</option><option value="2nd Sem">2nd Semester</option><option value="Summer">Summer</option></select><select id="schoolYearSelect" class="border border-gray-200 rounded-lg px-4 py-2 text-sm"><option value="2023-2024">2023-2024</option><option value="2024-2025">2024-2025</option><option value="2025-2026" selected>2025-2026</option></select><button onclick="saveAllLoadings()" class="bg-[#b0303b] text-white px-4 py-2 rounded-lg hover:bg-[#8a1f27] transition-colors flex items-center gap-2"><i class="fa-regular fa-floppy-disk"></i> Save All</button></div></div>
+        <div class="bg-white rounded-t-xl shadow-sm border border-gray-200 overflow-x-auto mb-6"><div class="flex whitespace-nowrap" id="loadingTabs"><div class="loading-tab active" data-level="shs">📚 SHS Faculty Loading</div><div class="loading-tab" data-level="college">🎓 College Faculty Loading</div></div></div>
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4"><div class="flex justify-between items-center mb-4"><h2 class="font-semibold text-gray-800" id="currentLevelTitle">SHS Faculty Loading</h2><span class="text-sm text-gray-500">Click any cell to edit</span></div>
+        <div id="loadingGridContainer" class="grid-container"><div class="loading-grid" id="loadingGrid"><div class="p-8 text-center text-gray-400">Loading...</div></div></div>
+        <div class="mt-4 p-4 bg-gray-50 rounded-lg flex justify-between items-center"><span class="font-medium">Total Load Hours: <span id="totalLoadHours">0</span></span><span class="font-medium">Total Cost: ₱<span id="totalCost">0.00</span></span></div></div>
+    </main>
+
+    <script type="module" src="js/database.js"></script>
+    <script src="js/navigation.js"></script>
+    <script type="module" src="js/teacher-loading.js"></script>
+</body>
+</html>

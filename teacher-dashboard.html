@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Philtech GMA | Teacher Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Security Scripts -->
+    <script src="js/csrf.js"></script>
+    <script src="js/xss-protection.js"></script>
+    <script src="js/secure-ajax.js"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #dcd3b8; }
+        .nav-link.active { background-color: #b0303b; color: white; }
+        .stat-card { transition: all 0.3s ease; }
+        .stat-card:hover { transform: translateY(-5px); box-shadow: 0 10px 25px -5px rgba(176, 48, 59, 0.2); }
+        /* Add to existing style section */
+        .group:hover .group-hover\:block {
+            display: block !important;
+        }
+
+        .user-dropdown {
+            position: absolute;
+            right: 0;
+            margin-top: 0.5rem;
+            width: 12rem;
+            background-color: white;
+            border-radius: 0.5rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            padding: 0.5rem 0;
+            z-index: 50;
+            display: none;
+        }
+
+        .group:hover .user-dropdown {
+            display: block;
+        }
+    </style>
+</head>
+<body class="text-gray-700 antialiased min-h-screen">
+
+    <!-- Top Navigation Bar -->
+    <nav class="bg-[#8a1f27] text-white px-6 py-3 flex justify-between items-center sticky top-0 z-50 shadow-md">
+        <div class="flex items-center gap-2">
+            <div class="w-8 h-8 bg-[#b0303b] rounded-lg flex items-center justify-center">
+                <i class="fa-solid fa-chalkboard-user text-[#f4e8c1]"></i>
+            </div>
+            <span class="font-bold text-lg">Philtech GMA - Teacher Portal</span>
+        </div>
+        
+        <div class="hidden md:flex items-center gap-1">
+            <a href="teacher-dashboard.html" class="nav-link active px-4 py-2 rounded-lg bg-[#b0303b] text-white font-medium">Dashboard</a>
+            <a href="teacher-payslips.html" class="nav-link px-4 py-2 rounded-lg hover:bg-[#d98989] transition-colors font-medium">My Payslips</a>
+            <a href="teacher-attendance.html" class="nav-link px-4 py-2 rounded-lg hover:bg-[#d98989] transition-colors font-medium">My Attendance</a>
+            <a href="teacher-profile.html" class="nav-link px-4 py-2 rounded-lg hover:bg-[#d98989] transition-colors font-medium">My Profile</a>
+        </div>
+        
+        <div class="flex items-center gap-3">
+            <span class="text-sm hidden sm:block" id="userName">Teacher</span>
+            <div class="relative group">
+                <img src="https://i.pravatar.cc/150?u=teacher" class="w-8 h-8 rounded-full border-2 border-white cursor-pointer">
+                <div class="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg py-1 hidden group-hover:block z-50">
+                    <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Profile</a>
+                    <a href="#" onclick="logout()" class="block px-4 py-2 text-sm text-red-600 hover:bg-gray-100">Logout</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="p-6 md:p-8 max-w-7xl mx-auto">
+        
+        <!-- Welcome Header -->
+        <div class="mb-8">
+            <h1 class="text-2xl font-bold text-[#8a1f27]">Welcome back, <span id="teacherName">Teacher</span>!</h1>
+            <p class="text-gray-500 text-sm mt-1" id="currentDate"></p>
+        </div>
+
+        <!-- Stats Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <!-- Current Salary -->
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 stat-card">
+                <div class="flex items-center gap-3 mb-3">
+                    <div class="w-10 h-10 rounded-lg bg-[#b0303b]/10 text-[#b0303b] flex items-center justify-center">
+                        <i class="fa-solid fa-money-bill-wave"></i>
+                    </div>
+                    <span class="text-sm font-medium text-gray-500">Current Salary</span>
+                </div>
+                <h2 class="text-2xl font-bold text-gray-800" id="currentSalary">₱25,000</h2>
+                <p class="text-xs text-gray-500 mt-2">Monthly basic pay</p>
+            </div>
+
+            <!-- Days Present -->
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 stat-card">
+                <div class="flex items-center gap-3 mb-3">
+                    <div class="w-10 h-10 rounded-lg bg-[#b0303b]/10 text-[#b0303b] flex items-center justify-center">
+                        <i class="fa-regular fa-calendar-check"></i>
+                    </div>
+                    <span class="text-sm font-medium text-gray-500">Days Present</span>
+                </div>
+                <h2 class="text-2xl font-bold text-gray-800" id="daysPresent">18</h2>
+                <p class="text-xs text-green-600 mt-2">This month</p>
+            </div>
+
+            <!-- Overtime Hours -->
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 stat-card">
+                <div class="flex items-center gap-3 mb-3">
+                    <div class="w-10 h-10 rounded-lg bg-[#b0303b]/10 text-[#b0303b] flex items-center justify-center">
+                        <i class="fa-regular fa-clock"></i>
+                    </div>
+                    <span class="text-sm font-medium text-gray-500">Overtime</span>
+                </div>
+                <h2 class="text-2xl font-bold text-gray-800" id="overtimeHours">12</h2>
+                <p class="text-xs text-yellow-600 mt-2">Hours this month</p>
+            </div>
+
+            <!-- Total Payslips -->
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 stat-card">
+                <div class="flex items-center gap-3 mb-3">
+                    <div class="w-10 h-10 rounded-lg bg-[#b0303b]/10 text-[#b0303b] flex items-center justify-center">
+                        <i class="fa-regular fa-file-lines"></i>
+                    </div>
+                    <span class="text-sm font-medium text-gray-500">Payslips</span>
+                </div>
+                <h2 class="text-2xl font-bold text-gray-800" id="payslipCount">6</h2>
+                <p class="text-xs text-blue-600 mt-2">Available</p>
+            </div>
+        </div>
+
+        <!-- Main Grid -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+            <!-- Personal Info Card -->
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                <h3 class="font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                    <i class="fa-regular fa-user text-[#b0303b]"></i> Personal Information
+                </h3>
+                <div class="space-y-3">
+                    <div class="flex justify-between">
+                        <span class="text-gray-500 text-sm">Employee ID</span>
+                        <span class="font-medium text-sm" id="employeeId">TCH001</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-500 text-sm">Position</span>
+                        <span class="font-medium text-sm" id="position">Senior Teacher</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-500 text-sm">Department</span>
+                        <span class="font-medium text-sm" id="department">Academic</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-500 text-sm">Hire Date</span>
+                        <span class="font-medium text-sm" id="hireDate">Jan 15, 2024</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-500 text-sm">Status</span>
+                        <span class="px-2 py-0.5 bg-green-100 text-green-600 rounded-full text-xs font-medium" id="status">Active</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Payslips Card -->
+            <div class="lg:col-span-2 bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center">
+                    <h3 class="font-semibold text-gray-800">Recent Payslips</h3>
+                    <a href="teacher-payslips.html" class="text-sm text-[#b0303b] hover:text-[#8a1f27]">View All</a>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full">
+                        <thead class="bg-gray-50 text-xs text-gray-500">
+                            <tr>
+                                <th class="py-2 px-4 text-left">Period</th>
+                                <th class="py-2 px-4 text-left">Gross</th>
+                                <th class="py-2 px-4 text-left">Deductions</th>
+                                <th class="py-2 px-4 text-left">Net</th>
+                                <th class="py-2 px-4 text-left">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody class="text-sm" id="recentPayslips">
+                            <tr><td colspan="5" class="py-4 text-center text-gray-400">Loading...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Attendance Overview -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- Monthly Attendance Chart -->
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                <h3 class="font-semibold text-gray-800 mb-4">Monthly Attendance</h3>
+                <div class="h-48">
+                    <canvas id="attendanceChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                <h3 class="font-semibold text-gray-800 mb-4">Quick Actions</h3>
+                <div class="grid grid-cols-2 gap-4">
+                    <button onclick="viewLatestPayslip()" class="p-4 bg-[#b0303b]/5 rounded-xl hover:bg-[#b0303b]/10 transition-colors text-center">
+                        <i class="fa-regular fa-file-lines text-[#b0303b] text-2xl mb-2"></i>
+                        <p class="text-sm font-medium">Latest Payslip</p>
+                    </button>
+                    <button onclick="viewAttendance()" class="p-4 bg-[#b0303b]/5 rounded-xl hover:bg-[#b0303b]/10 transition-colors text-center">
+                        <i class="fa-regular fa-calendar-check text-[#b0303b] text-2xl mb-2"></i>
+                        <p class="text-sm font-medium">My Attendance</p>
+                    </button>
+                    <button onclick="viewProfile()" class="p-4 bg-[#b0303b]/5 rounded-xl hover:bg-[#b0303b]/10 transition-colors text-center">
+                        <i class="fa-regular fa-user text-[#b0303b] text-2xl mb-2"></i>
+                        <p class="text-sm font-medium">My Profile</p>
+                    </button>
+                    <button onclick="contactHR()" class="p-4 bg-[#b0303b]/5 rounded-xl hover:bg-[#b0303b]/10 transition-colors text-center">
+                        <i class="fa-regular fa-envelope text-[#b0303b] text-2xl mb-2"></i>
+                        <p class="text-sm font-medium">Contact HR</p>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="js/database.js"></script>
+    <script src="js/navigation.js"></script>
+    <script>
+        let teacherId = null;
+        let teacherEmployee = null;
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            await Database.ensureDatabaseReady();
+            document.getElementById('currentDate').textContent = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+            
+            await loadTeacherData();
+            initChart();
+        });
+
+        async function loadTeacherData() {
+            // Get current user from localStorage
+            const user = JSON.parse(localStorage.getItem('user') || '{}');
+            document.getElementById('userName').textContent = user.full_name || user.username || 'Teacher';
+            document.getElementById('teacherName').textContent = user.full_name || user.username || 'Teacher';
+            
+            // Find employee record linked to this teacher
+            const employees = await Database.getAllEmployees();
+            teacherEmployee = employees.find(e => e.email === user.email || e.employee_id === user.employee_id) || employees[0];
+            
+            if (teacherEmployee) {
+                teacherId = teacherEmployee.id;
+                
+                // Update personal info
+                document.getElementById('employeeId').textContent = teacherEmployee.employee_id || `TCH${teacherEmployee.id}`;
+                document.getElementById('position').textContent = teacherEmployee.position || 'Teacher';
+                document.getElementById('department').textContent = teacherEmployee.department || 'Academic';
+                document.getElementById('hireDate').textContent = teacherEmployee.hire_date ? new Date(teacherEmployee.hire_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Jan 15, 2024';
+                document.getElementById('status').textContent = teacherEmployee.status || 'Active';
+                document.getElementById('currentSalary').textContent = '₱' + (teacherEmployee.base_salary || 25000).toLocaleString();
+                
+                // Load attendance stats
+                const attendance = await Database.getAttendanceByEmployee(teacherEmployee.id);
+                const totalDays = attendance.reduce((sum, a) => sum + (a.days_present || 1), 0);
+                const totalOT = attendance.reduce((sum, a) => sum + (a.ot_hours || a.overtime_hours || 0), 0);
+                
+                document.getElementById('daysPresent').textContent = totalDays || 18;
+                document.getElementById('overtimeHours').textContent = totalOT || 12;
+                
+                // Load payslips
+                const payroll = await Database.getAllPayroll();
+                const teacherPayroll = payroll.filter(p => p.employee_id === teacherEmployee.id);
+                document.getElementById('payslipCount').textContent = teacherPayroll.length || 6;
+                
+                // Recent payslips
+                const recent = teacherPayroll.slice(0, 3);
+                const tbody = document.getElementById('recentPayslips');
+                if (recent.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="5" class="py-4 text-center text-gray-400">No payslips yet</td></tr>';
+                } else {
+                    tbody.innerHTML = recent.map(p => `
+                        <tr class="border-b hover:bg-gray-50">
+                            <td class="py-2 px-4">${p.period || 'N/A'}</td>
+                            <td class="py-2 px-4">₱${(p.gross_salary || 0).toLocaleString()}</td>
+                            <td class="py-2 px-4">₱${(p.total_deduction || 0).toLocaleString()}</td>
+                            <td class="py-2 px-4 font-medium text-[#b0303b]">₱${(p.net_salary || 0).toLocaleString()}</td>
+                            <td class="py-2 px-4"><span class="px-2 py-1 rounded-full text-xs ${p.status === 'Paid' ? 'bg-green-100 text-green-600' : 'bg-yellow-100 text-yellow-600'}">${p.status}</span></td>
+                        </tr>
+                    `).join('');
+                }
+            }
+        }
+
+        function initChart() {
+            const ctx = document.getElementById('attendanceChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: ['Week 1', 'Week 2', 'Week 3', 'Week 4'],
+                    datasets: [{
+                        label: 'Hours Worked',
+                        data: [38, 40, 35, 42],
+                        borderColor: '#b0303b',
+                        backgroundColor: 'rgba(176,48,59,0.1)',
+                        tension: 0.4,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } }
+                }
+            });
+        }
+
+        function viewLatestPayslip() { window.location.href = 'teacher-payslips.html'; }
+        function viewAttendance() { window.location.href = 'teacher-attendance.html'; }
+        function viewProfile() { window.location.href = 'teacher-profile.html'; }
+        function contactHR() { alert('Contact HR at hr@philtech.edu'); }
+    </script>
+</body>
+</html>

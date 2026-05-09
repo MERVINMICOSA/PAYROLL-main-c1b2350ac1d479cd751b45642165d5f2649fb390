@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Philtech GMA | OIC Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Security Scripts -->
+    <script src="js/csrf.js"></script>
+    <script src="js/xss-protection.js"></script>
+    <script src="js/secure-ajax.js"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #dcd3b8; }
+        .nav-link.active { background-color: #b0303b; color: white; }
+        .loading-tab {
+            transition: all 0.3s ease;
+            border-bottom: 3px solid transparent;
+            padding: 12px 20px;
+            font-weight: 500;
+            cursor: pointer;
+        }
+        .loading-tab.active {
+            border-bottom-color: #b0303b;
+            color: #b0303b;
+            font-weight: 600;
+            background: rgba(176, 48, 59, 0.05);
+        }
+        .grid-container {
+            overflow-x: auto;
+            border-radius: 12px;
+            border: 1px solid #e5e7eb;
+            background: white;
+            max-height: 70vh;
+            overflow-y: auto;
+        }
+        .teacher-table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 1000px;
+        }
+        .teacher-table th {
+            background-color: #f9fafb;
+            font-weight: 600;
+            color: #374151;
+            padding: 12px 8px;
+            border: 1px solid #e5e7eb;
+            text-align: center;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        .teacher-table td {
+            padding: 10px 8px;
+            border: 1px solid #e5e7eb;
+            text-align: center;
+        }
+        .teacher-table td:first-child {
+            position: sticky;
+            left: 0;
+            background: white;
+            font-weight: 500;
+            text-align: left;
+            min-width: 180px;
+        }
+        .teacher-table input {
+            width: 100%;
+            text-align: center;
+            border: 1px solid #e5e7eb;
+            border-radius: 6px;
+            padding: 6px;
+            outline: none;
+        }
+        .teacher-table input:focus {
+            border-color: #b0303b;
+            outline: 2px solid rgba(176, 48, 59, 0.2);
+        }
+        .teacher-table input:disabled {
+            background-color: #f3f4f6;
+            color: #6b7280;
+        }
+        .total-cell {
+            background-color: #fef3c7;
+            font-weight: 600;
+            color: #b0303b;
+        }
+        .save-toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: #10b981;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 0.875rem;
+            z-index: 1000;
+            display: none;
+            align-items: center;
+            gap: 8px;
+        }
+        .save-toast.show {
+            display: flex;
+            animation: fadeInOut 2s ease;
+        }
+        @keyframes fadeInOut {
+            0% { opacity: 0; transform: translateY(20px); }
+            15% { opacity: 1; transform: translateY(0); }
+            85% { opacity: 1; transform: translateY(0); }
+            100% { opacity: 0; transform: translateY(-20px); }
+        }
+    </style>
+</head>
+<body class="text-gray-700 antialiased min-h-screen">
+
+    <nav class="bg-[#8a1f27] text-white px-6 py-3 flex justify-between items-center sticky top-0 z-50 shadow-md">
+        <div class="flex items-center gap-2">
+            <div class="w-8 h-8 bg-[#b0303b] rounded-lg flex items-center justify-center">
+                <i class="fa-solid fa-chalkboard-user text-[#f4e8c1]"></i>
+            </div>
+            <span class="font-bold text-lg">Philtech GMA - OIC</span>
+        </div>
+        
+        <div class="hidden md:flex items-center gap-1">
+            <a href="dashboard-oic.html" class="nav-link active px-4 py-2 rounded-lg bg-[#b0303b] text-white font-medium">Teacher Loading</a>
+        </div>
+        
+        <div class="flex items-center gap-3">
+            <span class="text-sm hidden sm:block" id="userName">OIC Head</span>
+            <div class="relative group">
+                <img src="https://i.pravatar.cc/150?u=oic" id="profileImage" class="w-8 h-8 rounded-full border-2 border-white cursor-pointer">
+                <div class="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg py-1 hidden group-hover:block z-50">
+                    <a href="#" onclick="logout()" class="block px-4 py-2 text-sm text-red-600 hover:bg-gray-100">Logout</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="p-6 md:p-8 max-w-7xl mx-auto">
+        
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+            <div>
+                <h1 class="text-2xl font-bold text-[#8a1f27]">Teacher Loading</h1>
+                <p class="text-gray-500 text-sm mt-1">Assign subjects and daily hours for teachers (rates are set by Accountant)</p>
+            </div>
+            
+            <div class="flex items-center gap-3">
+                <select id="semesterSelect" class="border border-gray-200 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-[#b0303b]">
+                    <option value="1st Sem">1st Semester</option>
+                    <option value="2nd Sem">2nd Semester</option>
+                    <option value="Summer">Summer</option>
+                </select>
+                
+                <select id="schoolYearSelect" class="border border-gray-200 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-[#b0303b]">
+                    <option value="2024-2025">2024-2025</option>
+                    <option value="2025-2026" selected>2025-2026</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-t-xl shadow-sm border border-gray-200 overflow-x-auto mb-6">
+            <div class="flex whitespace-nowrap" id="loadingTabs">
+                <div class="loading-tab active" data-level="shs">📚 SHS Faculty Loading</div>
+                <div class="loading-tab" data-level="college">🎓 College Faculty Loading</div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="font-semibold text-gray-800" id="currentLevelTitle">SHS Faculty Loading</h2>
+                <span class="text-sm text-gray-500">Click any cell to edit - saves automatically</span>
+            </div>
+
+            <div id="loadingContainer" class="grid-container">
+                <div id="loadingMessage" class="text-center py-8 text-gray-400">Loading teachers...</div>
+                <table class="teacher-table hidden" id="teacherTable">
+                    <thead id="tableHeader"></thead>
+                    <tbody id="tableBody"></tbody>
+                </table>
+            </div>
+
+            <div class="mt-4 p-4 bg-gray-50 rounded-lg flex justify-between items-center">
+                <span class="font-medium">Total Load Hours: <span id="totalLoadHours">0</span></span>
+                <span class="font-medium">Total Cost: ₱<span id="totalCost">0.00</span></span>
+            </div>
+        </div>
+    </main>
+
+    <div id="saveToast" class="save-toast">
+        <i class="fa-regular fa-circle-check"></i>
+        <span>Saved successfully</span>
+    </div>
+
+    <script type="module" src="js/database.js"></script>
+    <script src="js/navigation.js"></script>
+    <script type="module">
+        console.log("=== OIC DASHBOARD LOADED ===");
+        
+        const Database = await import('./js/database.js').then(m => m.Database || m);
+        
+        let currentLevel = 'shs';
+        let currentSemester = '1st Sem';
+        let currentSchoolYear = '2025-2026';
+        let allEmployees = [];
+        let allLoads = [];
+        let saveTimeout = null;
+        
+        const user = JSON.parse(localStorage.getItem('user') || '{}');
+        document.getElementById('userName').textContent = user.name || 'OIC Head';
+        
+        document.getElementById('semesterSelect').addEventListener('change', (e) => {
+            currentSemester = e.target.value;
+            loadData();
+        });
+        
+        document.getElementById('schoolYearSelect').addEventListener('change', (e) => {
+            currentSchoolYear = e.target.value;
+            loadData();
+        });
+        
+        document.querySelectorAll('.loading-tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                document.querySelectorAll('.loading-tab').forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+                currentLevel = tab.dataset.level;
+                document.getElementById('currentLevelTitle').textContent = 
+                    currentLevel === 'shs' ? 'SHS Faculty Loading' : 'College Faculty Loading';
+                loadData();
+            });
+        });
+        
+        function showSaveToast() {
+            const toast = document.getElementById('saveToast');
+            toast.classList.add('show');
+            if (saveTimeout) clearTimeout(saveTimeout);
+            saveTimeout = setTimeout(() => {
+                toast.classList.remove('show');
+            }, 2000);
+        }
+        
+        async function loadData() {
+            try {
+                document.getElementById('loadingMessage').classList.remove('hidden');
+                document.getElementById('teacherTable').classList.add('hidden');
+                
+                allEmployees = await Database.getAllEmployees();
+                allLoads = await Database.getAllTeacherLoads();
+                
+                console.log("Loaded employees:", allEmployees.length);
+                console.log("Loaded teacher loads:", allLoads.length);
+                
+                renderTable();
+                
+                document.getElementById('loadingMessage').classList.add('hidden');
+                document.getElementById('teacherTable').classList.remove('hidden');
+            } catch (error) {
+                console.error('Error loading data:', error);
+                document.getElementById('loadingMessage').innerHTML = 'Error loading teachers. Please refresh.';
+                document.getElementById('loadingMessage').classList.remove('hidden');
+            }
+        }
+        
+        function renderTable() {
+            const teachers = allEmployees.filter(emp => {
+                if (emp.status !== 'Active') return false;
+                if (currentLevel === 'shs') {
+                    return emp.assignment === 'shs_only' || emp.assignment === 'both';
+                } else {
+                    return emp.assignment === 'college_only' || emp.assignment === 'both';
+                }
+            });
+            
+            if (teachers.length === 0) {
+                document.getElementById('loadingMessage').innerHTML = 'No teachers found. Accountant needs to add teachers first.';
+                document.getElementById('loadingMessage').classList.remove('hidden');
+                document.getElementById('teacherTable').classList.add('hidden');
+                document.getElementById('totalLoadHours').textContent = '0';
+                document.getElementById('totalCost').textContent = '0.00';
+                return;
+            }
+            
+            const headers = ['Teacher Name', 'Subject', 'Rate/hr', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun', 'Total Hours', 'Total Pay'];
+            const headerHtml = `美国<th>${headers.join('</th><th>')}</th> </thead>`;
+            document.getElementById('tableHeader').innerHTML = headerHtml;
+            
+            let totalLoadHours = 0;
+            let totalCost = 0;
+            let bodyHtml = '';
+            
+            for (const teacher of teachers) {
+                const loading = allLoads.find(l => 
+                    l.employee_id === teacher.id && 
+                    l.semester === currentSemester && 
+                    l.school_year === currentSchoolYear
+                ) || {
+                    employee_id: teacher.id,
+                    semester: currentSemester,
+                    school_year: currentSchoolYear,
+                    subject: '',
+                    mon: 0, tue: 0, wed: 0, thu: 0, fri: 0, sat: 0, sun: 0
+                };
+                
+                let rate = 0;
+                if (teacher.assignment === 'shs_only' || teacher.assignment === 'both') {
+                    rate = teacher.rate_shs || 80;
+                } else if (teacher.assignment === 'college_only') {
+                    rate = teacher.rate_college || 85;
+                }
+                
+                const totalHours = (loading.mon || 0) + (loading.tue || 0) + (loading.wed || 0) + 
+                                  (loading.thu || 0) + (loading.fri || 0) + (loading.sat || 0) + (loading.sun || 0);
+                const totalPay = totalHours * rate;
+                
+                totalLoadHours += totalHours;
+                totalCost += totalPay;
+                
+                bodyHtml += `<tr data-id="${teacher.id}">
+                    <td style="text-align:left; font-weight:500;">${escapeHtml(teacher.full_name)}</td>
+                    <td><input type="text" value="${escapeHtml(loading.subject || '')}" data-field="subject" class="w-32"></td>
+                    <td><input type="text" value="₱${rate}/hr" disabled class="bg-gray-100 w-24"></td>
+                    <td><input type="number" step="0.5" value="${loading.mon || 0}" data-field="mon" class="w-16"></td>
+                    <td><input type="number" step="0.5" value="${loading.tue || 0}" data-field="tue" class="w-16"></td>
+                    <td><input type="number" step="0.5" value="${loading.wed || 0}" data-field="wed" class="w-16"></td>
+                    <td><input type="number" step="0.5" value="${loading.thu || 0}" data-field="thu" class="w-16"></td>
+                    <td><input type="number" step="0.5" value="${loading.fri || 0}" data-field="fri" class="w-16"></td>
+                    <td><input type="number" step="0.5" value="${loading.sat || 0}" data-field="sat" class="w-16"></td>
+                    <td><input type="number" step="0.5" value="${loading.sun || 0}" data-field="sun" class="w-16"></td>
+                    <td class="total-cell">${totalHours.toFixed(1)}</td>
+                    <td class="total-cell">₱${totalPay.toFixed(2)}</td>
+                </tr>`;
+            }
+            
+            document.getElementById('tableBody').innerHTML = bodyHtml;
+            document.getElementById('totalLoadHours').textContent = totalLoadHours.toFixed(1);
+            document.getElementById('totalCost').textContent = totalCost.toFixed(2);
+            
+            attachInputListeners();
+        }
+        
+        function escapeHtml(str) {
+            if (!str) return '';
+            return str.replace(/[&<>]/g, function(m) {
+                if (m === '&') return '&amp;';
+                if (m === '<') return '&lt;';
+                if (m === '>') return '&gt;';
+                return m;
+            });
+        }
+        
+        async function handleInputChange(e) {
+            const input = e.target;
+            const row = input.closest('tr');
+            if (!row) return;
+            
+            const employeeId = parseInt(row.dataset.id);
+            const field = input.dataset.field;
+            let value = input.type === 'number' ? (parseFloat(input.value) || 0) : input.value;
+            
+            const teacher = allEmployees.find(e => e.id === employeeId);
+            if (!teacher) return;
+            
+            const originalBg = input.style.backgroundColor;
+            input.style.backgroundColor = '#fff3cd';
+            
+            let loading = allLoads.find(l => 
+                l.employee_id === employeeId && 
+                l.semester === currentSemester && 
+                l.school_year === currentSchoolYear
+            );
+            
+            if (!loading) {
+                loading = {
+                    employee_id: employeeId,
+                    semester: currentSemester,
+                    school_year: currentSchoolYear
+                };
+            }
+            
+            loading[field] = value;
+            
+            try {
+                await Database.saveTeacherLoad(loading);
+                showSaveToast();
+                
+                const existingIndex = allLoads.findIndex(l => 
+                    l.employee_id === employeeId && 
+                    l.semester === currentSemester && 
+                    l.school_year === currentSchoolYear
+                );
+                if (existingIndex >= 0) {
+                    allLoads[existingIndex] = loading;
+                } else {
+                    allLoads.push(loading);
+                }
+                
+                const hours = (loading.mon || 0) + (loading.tue || 0) + (loading.wed || 0) + 
+                              (loading.thu || 0) + (loading.fri || 0) + (loading.sat || 0) + (loading.sun || 0);
+                
+                let rate = 0;
+                if (teacher.assignment === 'shs_only' || teacher.assignment === 'both') {
+                    rate = teacher.rate_shs || 80;
+                } else {
+                    rate = teacher.rate_college || 85;
+                }
+                const totalPay = hours * rate;
+                
+                const totalCell = row.querySelector('td:nth-child(11)');
+                const payCell = row.querySelector('td:nth-child(12)');
+                if (totalCell) totalCell.textContent = hours.toFixed(1);
+                if (payCell) payCell.textContent = `₱${totalPay.toFixed(2)}`;
+                
+                updateGlobalTotals();
+                
+            } catch (error) {
+                console.error('Error saving:', error);
+                alert('Failed to save. Please try again.');
+                input.value = loading[field];
+            } finally {
+                input.style.backgroundColor = originalBg;
+            }
+        }
+        
+        function updateGlobalTotals() {
+            const rows = document.querySelectorAll('#tableBody tr');
+            let totalHours = 0;
+            let totalCost = 0;
+            
+            rows.forEach(row => {
+                const teacherId = parseInt(row.dataset.id);
+                const teacher = allEmployees.find(e => e.id === teacherId);
+                if (!teacher) return;
+                
+                let rate = 0;
+                if (teacher.assignment === 'shs_only' || teacher.assignment === 'both') {
+                    rate = teacher.rate_shs || 80;
+                } else {
+                    rate = teacher.rate_college || 85;
+                }
+                
+                const loading = allLoads.find(l => 
+                    l.employee_id === teacherId && 
+                    l.semester === currentSemester && 
+                    l.school_year === currentSchoolYear
+                ) || { mon:0, tue:0, wed:0, thu:0, fri:0, sat:0, sun:0 };
+                
+                const hours = (loading.mon || 0) + (loading.tue || 0) + (loading.wed || 0) + 
+                              (loading.thu || 0) + (loading.fri || 0) + (loading.sat || 0) + (loading.sun || 0);
+                totalHours += hours;
+                totalCost += hours * rate;
+            });
+            
+            document.getElementById('totalLoadHours').textContent = totalHours.toFixed(1);
+            document.getElementById('totalCost').textContent = totalCost.toFixed(2);
+        }
+        
+        function attachInputListeners() {
+            const inputs = document.querySelectorAll('#tableBody input[type="text"], #tableBody input[type="number"]');
+            inputs.forEach(input => {
+                if (input.disabled) return;
+                input.removeEventListener('change', handleInputChange);
+                input.addEventListener('change', handleInputChange);
+            });
+        }
+        
+        window.logout = function() {
+            localStorage.clear();
+            window.location.href = 'index.html';
+        };
+        
+        loadData();
+    </script>
+</body>
+</html>

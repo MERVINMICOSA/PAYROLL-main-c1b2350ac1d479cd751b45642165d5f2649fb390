@@ -1,0 +1,780 @@
+/* ===== PHILTECH GMA - CUSTOM CSS ===== */
+/* UPDATED VERSION with Excel-style attendance grid styles and enhanced UI */
+/* This file replaces all individual CSS files with a single, minimal stylesheet */
+/* All styling is now handled by Tailwind CSS utility classes in the HTML */
+
+:root {
+    /* Philtech GMA Color Palette */
+    --primary-red: #b0303b;
+    --primary-red-light: #d98989;
+    --primary-red-dark: #8a1f27;
+    --bg-beige: #dcd3b8;
+    --text-light: #f4e8c1;
+    --text-dark: #2c3e50;
+    
+    /* Shadows */
+    --shadow-sm: 0 4px 6px rgba(0, 0, 0, 0.07);
+    --shadow-md: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    --shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+    
+    /* Transitions */
+    --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    
+    /* Excel Grid Colors */
+    --grid-header-bg: #f9fafb;
+    --grid-border: #e5e7eb;
+    --grid-cell-hover: rgba(176, 48, 59, 0.05);
+    --grid-today-bg: rgba(176, 48, 59, 0.1);
+    --grid-weekend-bg: #f3f4f6;
+    --grid-holiday-bg: #fee2e2;
+}
+
+/* ===== GLOBAL STYLES ===== */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html {
+    scroll-behavior: smooth;
+}
+
+body {
+    font-family: 'Inter', sans-serif;
+    background-color: var(--bg-beige);
+    color: var(--text-dark);
+    line-height: 1.6;
+    min-height: 100vh;
+}
+
+/* ===== CUSTOM SCROLLBAR ===== */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: rgba(176, 48, 59, 0.1);
+    border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--primary-red);
+    border-radius: 10px;
+    transition: var(--transition);
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--primary-red-dark);
+}
+
+/* ===== TEXT SELECTION ===== */
+::selection {
+    background: var(--primary-red);
+    color: white;
+}
+
+/* ===== ANIMATIONS ===== */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes pulse {
+    0% {
+        box-shadow: 0 0 0 0 rgba(176, 48, 59, 0.4);
+    }
+    70% {
+        box-shadow: 0 0 0 15px rgba(176, 48, 59, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(176, 48, 59, 0);
+    }
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@keyframes slideOut {
+    from {
+        transform: translateX(0);
+        opacity: 1;
+    }
+    to {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+}
+
+/* ===== EXCEL-STYLE ATTENDANCE GRID ===== */
+.attendance-grid-container {
+    overflow-x: auto;
+    border-radius: 12px;
+    border: 1px solid var(--grid-border);
+    background: white;
+    box-shadow: var(--shadow-sm);
+    max-height: calc(100vh - 300px);
+    overflow-y: auto;
+}
+
+.attendance-grid {
+    display: grid;
+    min-width: max-content;
+}
+
+.grid-header {
+    background-color: var(--grid-header-bg);
+    font-weight: 600;
+    color: #374151;
+    padding: 14px 12px;
+    border-bottom: 2px solid var(--grid-border);
+    border-right: 1px solid var(--grid-border);
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    text-align: center;
+    font-size: 0.875rem;
+}
+
+.grid-row {
+    display: contents;
+}
+
+.grid-cell {
+    padding: 12px 8px;
+    border-right: 1px solid var(--grid-border);
+    border-bottom: 1px solid var(--grid-border);
+    text-align: center;
+    transition: background-color 0.2s;
+    min-width: 60px;
+}
+
+.grid-cell.name-cell {
+    position: sticky;
+    left: 0;
+    background: white;
+    z-index: 10;
+    font-weight: 500;
+    text-align: left;
+    padding-left: 16px;
+    min-width: 200px;
+    box-shadow: 2px 0 5px -2px rgba(0,0,0,0.1);
+}
+
+.grid-cell input {
+    width: 100%;
+    text-align: center;
+    border: none;
+    background: transparent;
+    outline: none;
+    font-size: 0.95rem;
+}
+
+.grid-cell input:focus {
+    background-color: #fff3cd;
+    border-radius: 4px;
+    padding: 4px 0;
+}
+
+.grid-cell.today {
+    background-color: var(--grid-today-bg);
+    border: 2px solid var(--primary-red);
+}
+
+.grid-cell.weekend {
+    background-color: var(--grid-weekend-bg);
+    color: #9ca3af;
+}
+
+.grid-cell.holiday {
+    background-color: var(--grid-holiday-bg);
+    color: #dc2626;
+}
+
+.grid-cell.total-cell {
+    background-color: var(--grid-header-bg);
+    font-weight: 600;
+    color: var(--primary-red);
+}
+
+.grid-cell:hover:not(.total-cell):not(.name-cell) {
+    background-color: var(--grid-cell-hover);
+}
+
+/* ===== EXCEL-STYLE TABS ===== */
+.attendance-tab {
+    transition: var(--transition);
+    border-bottom: 3px solid transparent;
+    padding: 12px 20px;
+    font-weight: 500;
+    cursor: pointer;
+    white-space: nowrap;
+    color: #4b5563;
+}
+
+.attendance-tab.active {
+    border-bottom-color: var(--primary-red);
+    color: var(--primary-red);
+    font-weight: 600;
+    background: rgba(176, 48, 59, 0.05);
+}
+
+.attendance-tab:hover {
+    background-color: var(--grid-cell-hover);
+}
+
+/* ===== STAT CARDS ===== */
+.stat-card {
+    background: white;
+    border-radius: 16px;
+    padding: 20px;
+    box-shadow: var(--shadow-sm);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    border: 1px solid var(--grid-border);
+}
+
+.stat-card:hover {
+    transform: translateY(-5px);
+    box-shadow: var(--shadow-lg);
+}
+
+/* ===== DATE NAVIGATOR ===== */
+.date-nav {
+    background: white;
+    border-radius: 50px;
+    padding: 4px;
+    box-shadow: var(--shadow-sm);
+    display: inline-flex;
+}
+
+.date-nav button {
+    padding: 8px 20px;
+    border-radius: 50px;
+    transition: var(--transition);
+    font-weight: 500;
+}
+
+.date-nav button:hover {
+    background-color: var(--grid-weekend-bg);
+}
+
+.date-nav button.active {
+    background-color: var(--primary-red);
+    color: white;
+}
+
+/* ===== LIVE DATE BADGE ===== */
+.live-date {
+    background: linear-gradient(135deg, var(--primary-red) 0%, var(--primary-red-dark) 100%);
+    color: white;
+    padding: 8px 20px;
+    border-radius: 50px;
+    font-weight: 500;
+    animation: pulse 2s infinite;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* ===== BULK ACTIONS ===== */
+.bulk-actions {
+    background: white;
+    border-radius: 12px;
+    padding: 16px;
+    border: 1px solid var(--grid-border);
+}
+
+/* ===== LOADING SPINNER ===== */
+.spinner {
+    border: 3px solid #f3f3f3;
+    border-top: 3px solid var(--primary-red);
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* ===== PROFILE MENU ===== */
+.profile-menu {
+    position: fixed;
+    width: 14rem;
+    background-color: white;
+    border-radius: 0.75rem;
+    box-shadow: var(--shadow-lg);
+    padding: 0.5rem 0;
+    z-index: 1000;
+    border: 1px solid var(--grid-border);
+}
+
+.profile-menu-item {
+    padding: 0.75rem 1rem;
+    transition: var(--transition);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    color: #374151;
+}
+
+.profile-menu-item:hover {
+    background-color: var(--grid-weekend-bg);
+}
+
+.profile-menu-item.logout:hover {
+    background-color: #fee2e2;
+    color: #dc2626;
+}
+
+/* ===== STATUS BADGES ===== */
+.status-badge {
+    padding: 4px 12px;
+    border-radius: 50px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    display: inline-block;
+}
+
+.status-active {
+    background-color: #d4edda;
+    color: #155724;
+}
+
+.status-pending {
+    background-color: #fff3cd;
+    color: #856404;
+}
+
+.status-approved {
+    background-color: #d4edda;
+    color: #155724;
+}
+
+.status-paid {
+    background-color: #cce5ff;
+    color: #004085;
+}
+
+.status-rejected {
+    background-color: #f8d7da;
+    color: #721c24;
+}
+
+.status-archived {
+    background-color: #e2e3e5;
+    color: #6c757d;
+}
+
+.status-inactive {
+    background-color: #f8d7da;
+    color: #721c24;
+}
+
+/* ===== ROLE BADGES ===== */
+.badge-superadmin {
+    background-color: var(--primary-red-dark);
+    color: white;
+}
+
+.badge-accountant {
+    background-color: var(--primary-red);
+    color: white;
+}
+
+.badge-teacher {
+    background-color: var(--primary-red-light);
+    color: white;
+}
+
+.badge-admin {
+    background-color: #10b981;
+    color: white;
+}
+
+.badge-guard {
+    background-color: #f59e0b;
+    color: white;
+}
+
+.badge-sa {
+    background-color: #6366f1;
+    color: white;
+}
+
+/* ===== APPROVAL SECTION ===== */
+.approval-card {
+    background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+    color: white;
+    border-radius: 16px;
+    padding: 20px;
+    position: relative;
+    overflow: hidden;
+}
+
+.approval-card::after {
+    content: '⏳';
+    position: absolute;
+    bottom: -20px;
+    right: -20px;
+    font-size: 100px;
+    opacity: 0.1;
+    transform: rotate(-15deg);
+}
+
+.pending-item {
+    background: white;
+    border-radius: 12px;
+    padding: 12px 16px;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    box-shadow: var(--shadow-sm);
+    transition: var(--transition);
+}
+
+.pending-item:hover {
+    transform: translateX(5px);
+    box-shadow: var(--shadow-md);
+}
+
+/* ===== PAYSLIP SUMMARY CARD ===== */
+.summary-card {
+    background: linear-gradient(135deg, var(--primary-red) 0%, var(--primary-red-dark) 100%);
+    color: white;
+    border-radius: 16px;
+    padding: 24px;
+    position: relative;
+    overflow: hidden;
+}
+
+.summary-card::after {
+    content: '💰';
+    position: absolute;
+    bottom: -20px;
+    right: -20px;
+    font-size: 120px;
+    opacity: 0.1;
+    transform: rotate(-15deg);
+}
+
+/* ===== FILTER PILLS ===== */
+.filter-pill {
+    padding: 6px 16px;
+    border-radius: 50px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: var(--transition);
+    background-color: white;
+    border: 1px solid var(--grid-border);
+}
+
+.filter-pill.active {
+    background-color: var(--primary-red);
+    color: white;
+    border-color: var(--primary-red);
+}
+
+.filter-pill:hover {
+    background-color: var(--grid-weekend-bg);
+}
+
+.filter-pill.active:hover {
+    background-color: var(--primary-red-dark);
+}
+
+/* ===== ARCHIVE TOGGLE ===== */
+.archive-toggle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    background: white;
+    border-radius: 50px;
+    border: 1px solid var(--grid-border);
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.archive-toggle.active {
+    background: var(--primary-red);
+    color: white;
+    border-color: var(--primary-red);
+}
+
+.archive-toggle.active i {
+    color: white;
+}
+
+/* ===== MODAL STYLES ===== */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0,0,0,0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.modal-content {
+    background: white;
+    border-radius: 16px;
+    padding: 24px;
+    max-width: 600px;
+    width: 90%;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: var(--shadow-lg);
+}
+
+/* ===== ACTION BUTTONS ===== */
+.approve-btn {
+    background-color: #10b981;
+    color: white;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: var(--transition);
+    border: none;
+}
+
+.approve-btn:hover {
+    background-color: #059669;
+    transform: translateY(-1px);
+}
+
+.reject-btn {
+    background-color: #ef4444;
+    color: white;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: var(--transition);
+    border: none;
+}
+
+.reject-btn:hover {
+    background-color: #dc2626;
+    transform: translateY(-1px);
+}
+
+.download-btn {
+    background-color: #28a745;
+    color: white;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: var(--transition);
+    border: none;
+}
+
+.download-btn:hover {
+    background-color: #218838;
+    transform: translateY(-1px);
+}
+
+.download-btn:disabled {
+    background-color: #d1d5db;
+    color: #9ca3af;
+    cursor: not-allowed;
+    transform: none;
+}
+
+/* ===== FORM STYLES ===== */
+.form-group {
+    margin-bottom: 1.5rem;
+}
+
+.form-label {
+    display: block;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #374151;
+    margin-bottom: 0.5rem;
+}
+
+.form-input {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    border: 1px solid var(--grid-border);
+    border-radius: 0.5rem;
+    transition: var(--transition);
+}
+
+.form-input:focus {
+    outline: none;
+    ring: 2px solid var(--primary-red);
+    border-color: transparent;
+}
+
+.form-select {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    border: 1px solid var(--grid-border);
+    border-radius: 0.5rem;
+    background-color: white;
+}
+
+/* ===== TOAST NOTIFICATION ===== */
+.toast-container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 9999;
+}
+
+.toast {
+    color: white;
+    padding: 12px 20px;
+    border-radius: 8px;
+    box-shadow: var(--shadow-lg);
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 250px;
+    animation: slideIn 0.3s ease;
+}
+
+.toast.success {
+    background-color: #10b981;
+}
+
+.toast.error {
+    background-color: #ef4444;
+}
+
+.toast.warning {
+    background-color: #f59e0b;
+}
+
+.toast.info {
+    background-color: #3b82f6;
+}
+
+/* ===== PRINT STYLES ===== */
+@media print {
+    .no-print {
+        display: none !important;
+    }
+    
+    body {
+        background-color: white;
+    }
+    
+    .attendance-grid {
+        border: 1px solid black;
+    }
+    
+    .grid-header {
+        background-color: #f0f0f0 !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+}
+
+/* ===== RESPONSIVE UTILITIES ===== */
+@media (max-width: 640px) {
+    .hide-on-mobile {
+        display: none !important;
+    }
+    
+    .grid-cell.name-cell {
+        min-width: 150px;
+    }
+    
+    .attendance-tab {
+        padding: 8px 12px;
+        font-size: 0.875rem;
+    }
+}
+
+@media (min-width: 641px) and (max-width: 1024px) {
+    .hide-on-tablet {
+        display: none !important;
+    }
+}
+
+/* ===== SAFE AREA FOR NOTCHED DEVICES ===== */
+@supports (padding: max(0px)) {
+    .safe-top {
+        padding-top: env(safe-area-inset-top);
+    }
+    
+    .safe-bottom {
+        padding-bottom: env(safe-area-inset-bottom);
+    }
+}
+
+/* ===== DARK MODE SUPPORT (Optional) ===== */
+@media (prefers-color-scheme: dark) {
+    :root {
+        /* Dark mode adjustments if needed */
+    }
+}
+
+/* ===== UTILITY CLASSES ===== */
+.animate-fadeIn {
+    animation: fadeIn 0.5s ease;
+}
+
+.animate-slideUp {
+    animation: slideUp 0.5s ease;
+}
+
+.animate-pulse-custom {
+    animation: pulse 2s infinite;
+}
+
+.glass-effect {
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+}
+
+.text-gradient {
+    background: linear-gradient(135deg, var(--primary-red) 0%, var(--primary-red-dark) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}

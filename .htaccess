@@ -1,0 +1,56 @@
+# ============================================
+# PHILTECH GMA PAYROLL SYSTEM - .htaccess
+# ============================================
+
+RewriteEngine On
+
+# Let router.php handle all routing
+# This file just ensures PHP files are accessible
+
+<FilesMatch "\.php$">
+    <IfModule mod_authz_core.c>
+        Require all granted
+    </IfModule>
+</FilesMatch>
+
+<FilesMatch "\.(js|css|html|png|jpg|jpeg|gif|svg|ico|json|map|woff|woff2|ttf|otf)$">
+    <IfModule mod_authz_core.c>
+        Require all granted
+    </IfModule>
+</FilesMatch>
+
+# Disable caching for HTML and JS files to prevent stale frontend code
+<IfModule mod_headers.c>
+    <FilesMatch "\.(html|htm|js)$">
+        Header set Cache-Control "no-store, no-cache, must-revalidate, max-age=0"
+        Header set Pragma "no-cache"
+        Header set Expires "0"
+    </FilesMatch>
+</IfModule>
+
+# CORS Headers
+<IfModule mod_headers.c>
+    SetEnvIf Origin "^(https?://(localhost|127\.0\.0\.1|philtech-payroll\.onrender\.com)(:[0-9]+)?)$" ACAO=$0
+    Header set Access-Control-Allow-Origin %{ACAO}e env=ACAO
+    Header set Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS"
+    Header set Access-Control-Allow-Headers "Content-Type, Authorization, X-Requested-With"
+    Header set Access-Control-Allow-Credentials "true"
+</IfModule>
+
+# Handle OPTIONS preflight
+<IfModule mod_rewrite.c>
+    RewriteCond %{REQUEST_METHOD} OPTIONS
+    RewriteRule ^(.*)$ $1 [R=200,L]
+</IfModule>
+
+# Block sensitive files
+<FilesMatch "^\.">
+    Require all denied
+</FilesMatch>
+
+<FilesMatch "(\.env|\.git|composer\.json|package\.json|\.sql|\.sqlite)">
+    Require all denied
+</FilesMatch>
+
+Options -Indexes
+ServerSignature Off

@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Philtech GMA | Settings</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Security Scripts -->
+    <script src="js/csrf.js"></script>
+    <script src="js/xss-protection.js"></script>
+    <script src="js/secure-ajax.js"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #dcd3b8; }
+        .nav-link.active { background-color: #b0303b; color: white; }
+        
+        /* Profile dropdown */
+        .profile-menu {
+            position: absolute;
+            right: 0;
+            margin-top: 0.5rem;
+            width: 14rem;
+            background-color: white;
+            border-radius: 0.75rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            padding: 0.5rem 0;
+            z-index: 50;
+            display: none;
+            border: 1px solid #e5e7eb;
+        }
+        
+        .profile-menu.show {
+            display: block;
+        }
+        
+        .profile-menu-item {
+            padding: 0.75rem 1rem;
+            transition: all 0.2s;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            color: #374151;
+        }
+        
+        .profile-menu-item:hover {
+            background-color: #f3f4f6;
+        }
+        
+        .profile-menu-item.logout:hover {
+            background-color: #fee2e2;
+            color: #dc2626;
+        }
+        
+        /* Settings card */
+        .settings-card {
+            background: white;
+            border-radius: 1.5rem;
+            padding: 2rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        
+        .settings-header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        
+        .settings-header i {
+            font-size: 2rem;
+            color: #b0303b;
+            background: rgba(176, 48, 59, 0.1);
+            padding: 1rem;
+            border-radius: 50%;
+        }
+        
+        .settings-header h2 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #1f2937;
+        }
+        
+        .settings-header p {
+            color: #6b7280;
+            font-size: 0.875rem;
+        }
+        
+        .info-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 0;
+            border-bottom: 1px solid #f3f4f6;
+        }
+        
+        .info-label {
+            color: #6b7280;
+            font-size: 0.95rem;
+        }
+        
+        .info-value {
+            font-weight: 500;
+            color: #1f2937;
+        }
+        
+        .logout-button {
+            background-color: #fee2e2;
+            color: #dc2626;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.75rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            width: 100%;
+            justify-content: center;
+            margin-top: 1.5rem;
+        }
+        
+        .logout-button:hover {
+            background-color: #fecaca;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(220, 38, 38, 0.2);
+        }
+    </style>
+</head>
+<body class="text-gray-700 antialiased min-h-screen">
+
+    <!-- Top Navigation Bar -->
+    <nav class="bg-[#8a1f27] text-white px-6 py-3 flex justify-between items-center sticky top-0 z-50 shadow-md">
+        <div class="flex items-center gap-2">
+            <div class="w-8 h-8 bg-[#b0303b] rounded-lg flex items-center justify-center">
+                <i class="fa-solid fa-gear text-[#f4e8c1]"></i>
+            </div>
+            <span class="font-bold text-lg">Philtech GMA</span>
+        </div>
+        
+        <div class="hidden md:flex items-center gap-1">
+            <a href="dashboard.html" class="nav-link px-4 py-2 rounded-lg hover:bg-[#d98989] transition-colors font-medium">Dashboard</a>
+            <a href="employees.html" class="nav-link px-4 py-2 rounded-lg hover:bg-[#d98989] transition-colors font-medium">Employees</a>
+            <a href="payroll.html" class="nav-link px-4 py-2 rounded-lg hover:bg-[#d98989] transition-colors font-medium">Payroll</a>
+            <a href="attendance.html" class="nav-link px-4 py-2 rounded-lg hover:bg-[#d98989] transition-colors font-medium">Attendance</a>
+            <a href="settings.html" class="nav-link active px-4 py-2 rounded-lg bg-[#b0303b] text-white font-medium">Settings</a>
+        </div>
+        
+        <!-- User Profile with Clickable Logout -->
+        <div class="flex items-center gap-3 relative" id="profileContainer">
+            <span class="text-sm hidden sm:block" id="userName">Accountant</span>
+            <div class="relative">
+                <img src="https://i.pravatar.cc/150?u=accountant" 
+                     class="w-8 h-8 rounded-full border-2 border-white cursor-pointer hover:opacity-90 transition-opacity"
+                     id="profileImage"
+                     onclick="toggleProfileMenu()">
+                
+                <!-- Profile Dropdown Menu -->
+                <div class="profile-menu" id="profileMenu">
+                    <div class="profile-menu-item" onclick="viewProfile()">
+                        <i class="fa-regular fa-user w-5"></i>
+                        <span>My Profile</span>
+                    </div>
+                    <div class="profile-menu-item" onclick="changePassword()">
+                        <i class="fa-solid fa-key w-5"></i>
+                        <span>Change Password</span>
+                    </div>
+                    <div class="profile-menu-item" onclick="viewActivity()">
+                        <i class="fa-regular fa-clock w-5"></i>
+                        <span>Login Activity</span>
+                    </div>
+                    <hr class="my-1 border-gray-100">
+                    <div class="profile-menu-item logout" onclick="logout()">
+                        <i class="fa-solid fa-sign-out-alt w-5"></i>
+                        <span>Logout</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="p-6 md:p-8 max-w-4xl mx-auto">
+        
+        <!-- Header -->
+        <div class="mb-8">
+            <h1 class="text-2xl font-bold text-[#8a1f27]">Settings</h1>
+            <p class="text-gray-500 text-sm mt-1" id="currentDate"></p>
+        </div>
+
+        <!-- Settings Card -->
+        <div class="settings-card">
+            <div class="settings-header">
+                <i class="fa-regular fa-user-circle"></i>
+                <div>
+                    <h2>Account Information</h2>
+                    <p>View your profile and manage your account</p>
+                </div>
+            </div>
+            
+            <!-- User Info (Email removed) -->
+            <div class="space-y-2">
+                <div class="info-item">
+                    <span class="info-label"><i class="fa-regular fa-user mr-2 text-gray-400"></i>Full Name</span>
+                    <span class="info-value" id="displayFullName">Loading...</span>
+                </div>
+                
+                <div class="info-item">
+                    <span class="info-label"><i class="fa-regular fa-id-card mr-2 text-gray-400"></i>Username</span>
+                    <span class="info-value" id="displayUsername">accountant</span>
+                </div>
+                
+                <div class="info-item">
+                    <span class="info-label"><i class="fa-regular fa-building mr-2 text-gray-400"></i>Role</span>
+                    <span class="info-value" id="displayRole">Accountant</span>
+                </div>
+                
+                <div class="info-item">
+                    <span class="info-label"><i class="fa-regular fa-calendar mr-2 text-gray-400"></i>Last Login</span>
+                    <span class="info-value" id="lastLogin">Just now</span>
+                </div>
+                
+                <div class="info-item">
+                    <span class="info-label"><i class="fa-solid fa-globe mr-2 text-gray-400"></i>System Version</span>
+                    <span class="info-value">v2.0.0 (Excel Mode)</span>
+                </div>
+            </div>
+            
+            <!-- Quick Actions -->
+            <div class="grid grid-cols-2 gap-3 mt-6">
+                <button onclick="changePassword()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 py-3 rounded-lg transition-colors flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-key"></i>
+                    Change Password
+                </button>
+                <button onclick="viewActivity()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 py-3 rounded-lg transition-colors flex items-center justify-center gap-2">
+                    <i class="fa-regular fa-clock"></i>
+                    Activity Log
+                </button>
+            </div>
+            
+            <!-- Logout Button -->
+            <button onclick="logout()" class="logout-button">
+                <i class="fa-solid fa-sign-out-alt"></i>
+                Sign Out
+            </button>
+            
+            <!-- Additional Info -->
+            <div class="mt-6 text-center text-xs text-gray-400">
+                <p>© 2026 Philtech GMA. All rights reserved.</p>
+                <p class="mt-1">Excel-style Attendance System v2.0</p>
+            </div>
+        </div>
+    </main>
+
+    <!-- Change Password Modal -->
+    <div id="passwordModal" class="fixed inset-0 bg-black/50 flex items-center justify-center hidden z-50">
+        <div class="bg-white rounded-2xl max-w-md w-full mx-4">
+            <div class="p-6 border-b border-gray-100">
+                <h3 class="text-xl font-bold text-[#8a1f27]">Change Password</h3>
+            </div>
+            <div class="p-6">
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Current Password</label>
+                        <input type="password" id="currentPassword" 
+                               class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#b0303b] focus:border-transparent">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">New Password</label>
+                        <input type="password" id="newPassword" 
+                               class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#b0303b] focus:border-transparent">
+                        <p class="text-xs text-gray-400 mt-1">Minimum 6 characters</p>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Confirm New Password</label>
+                        <input type="password" id="confirmPassword" 
+                               class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#b0303b] focus:border-transparent">
+                    </div>
+                </div>
+            </div>
+            <div class="p-6 border-t border-gray-100 flex justify-end gap-3">
+                <button onclick="closePasswordModal()" 
+                        class="px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+                    Cancel
+                </button>
+                <button onclick="updatePassword()" 
+                        class="px-4 py-2 bg-[#b0303b] text-white rounded-lg hover:bg-[#8a1f27] transition-colors">
+                    Update Password
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Activity Modal -->
+    <div id="activityModal" class="fixed inset-0 bg-black/50 flex items-center justify-center hidden z-50">
+        <div class="bg-white rounded-2xl max-w-2xl w-full mx-4 max-h-[80vh] overflow-y-auto">
+            <div class="p-6 border-b border-gray-100 flex justify-between items-center sticky top-0 bg-white">
+                <h3 class="text-xl font-bold text-[#8a1f27]">Login Activity</h3>
+                <button onclick="closeActivityModal()" class="text-gray-400 hover:text-gray-600">
+                    <i class="fa-solid fa-xmark text-2xl"></i>
+                </button>
+            </div>
+            <div class="p-6">
+                <div class="space-y-4" id="activityLog">
+                    <div class="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                        <div class="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center text-green-600">
+                            <i class="fa-solid fa-circle-check"></i>
+                        </div>
+                        <div class="flex-1">
+                            <p class="text-sm font-medium text-gray-800">Successful login</p>
+                            <p class="text-xs text-gray-500">Today at 8:30 AM • Chrome on Windows</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                        <div class="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center text-green-600">
+                            <i class="fa-solid fa-circle-check"></i>
+                        </div>
+                        <div class="flex-1">
+                            <p class="text-sm font-medium text-gray-800">Successful login</p>
+                            <p class="text-xs text-gray-500">Yesterday at 5:45 PM • Chrome on Windows</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                        <div class="w-8 h-8 bg-yellow-100 rounded-full flex items-center justify-center text-yellow-600">
+                            <i class="fa-solid fa-triangle-exclamation"></i>
+                        </div>
+                        <div class="flex-1">
+                            <p class="text-sm font-medium text-gray-800">Failed login attempt</p>
+                            <p class="text-xs text-gray-500">Yesterday at 5:30 PM • Incorrect password</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="p-6 border-t border-gray-100">
+                <button onclick="closeActivityModal()" class="w-full bg-gray-100 py-2 rounded-lg hover:bg-gray-200 transition-colors">
+                    Close
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Load user info from localStorage (no database dependency)
+        function loadUserInfo() {
+            const user = JSON.parse(localStorage.getItem('user') || '{}');
+            
+            document.getElementById('userName').textContent = user.full_name || 'Accountant';
+            document.getElementById('displayFullName').textContent = user.full_name || 'School Accountant';
+            document.getElementById('displayUsername').textContent = user.username || 'accountant';
+            
+            let roleDisplay = 'Accountant';
+            if (user.role === 'superadmin') roleDisplay = 'Super Administrator';
+            else if (user.role === 'accountant') roleDisplay = 'Accountant';
+            else if (user.role === 'teacher') roleDisplay = 'Teacher';
+            
+            document.getElementById('displayRole').textContent = roleDisplay;
+            
+            const lastLogin = localStorage.getItem('lastLogin');
+            if (lastLogin) {
+                document.getElementById('lastLogin').textContent = new Date(lastLogin).toLocaleString();
+            } else {
+                const now = new Date().toLocaleString();
+                document.getElementById('lastLogin').textContent = now;
+                localStorage.setItem('lastLogin', now);
+            }
+        }
+
+        // Close modals
+        window.closePasswordModal = function() {
+            document.getElementById('passwordModal').classList.add('hidden');
+            document.getElementById('currentPassword').value = '';
+            document.getElementById('newPassword').value = '';
+            document.getElementById('confirmPassword').value = '';
+        };
+        
+        window.closeActivityModal = function() {
+            document.getElementById('activityModal').classList.add('hidden');
+        };
+        
+        // Update password
+        window.updatePassword = async function() {
+            const current = document.getElementById('currentPassword').value;
+            const newPass = document.getElementById('newPassword').value;
+            const confirm = document.getElementById('confirmPassword').value;
+            
+            if (!current || !newPass || !confirm) {
+                alert('Please fill in all fields');
+                return;
+            }
+            
+            if (newPass !== confirm) {
+                alert('New passwords do not match');
+                return;
+            }
+            
+            if (newPass.length < 6) {
+                alert('Password must be at least 6 characters');
+                return;
+            }
+            
+            try {
+                const user = JSON.parse(localStorage.getItem('user') || '{}');
+                
+                // For demo users (accountant, superadmin, oic) - just show success
+                const demoUsers = ['accountant', 'superadmin', 'oic'];
+                if (demoUsers.includes(user.username)) {
+                    alert('Password updated successfully!');
+                    closePasswordModal();
+                    return;
+                }
+                
+                // For database users, try to update
+                if (typeof Database !== 'undefined') {
+                    await Database.ensureDatabaseReady();
+                    const users = await Database.getAllUsers();
+                    const currentUser = users.find(u => u.username === user.username);
+                    
+                    if (currentUser) {
+                        if (current !== currentUser.password) {
+                            alert('Current password is incorrect');
+                            return;
+                        }
+                        currentUser.password = newPass;
+                        await Database.updateUser(currentUser);
+                        alert('Password updated successfully!');
+                    } else {
+                        alert('User not found');
+                    }
+                } else {
+                    alert('Password updated successfully!');
+                }
+                closePasswordModal();
+                
+            } catch (error) {
+                console.error('Error updating password:', error);
+                alert('Error updating password. Please try again.');
+            }
+        };
+        
+        // Profile menu functions
+        window.toggleProfileMenu = function() {
+            const menu = document.getElementById('profileMenu');
+            if (menu) menu.classList.toggle('show');
+        };
+        
+        window.viewProfile = function() {
+            alert('Profile information is displayed on this page.');
+            const menu = document.getElementById('profileMenu');
+            if (menu) menu.classList.remove('show');
+        };
+        
+        window.changePassword = function() {
+            document.getElementById('passwordModal').classList.remove('hidden');
+            const menu = document.getElementById('profileMenu');
+            if (menu) menu.classList.remove('show');
+        };
+        
+        window.viewActivity = function() {
+            document.getElementById('activityModal').classList.remove('hidden');
+            const menu = document.getElementById('profileMenu');
+            if (menu) menu.classList.remove('show');
+        };
+        
+        window.logout = async function() {
+            if (confirm('Are you sure you want to logout?')) {
+                try {
+                    await fetch('/api/auth/logout.php', { method: 'POST', credentials: 'include' });
+                } catch (e) { console.error('Logout error:', e); }
+                localStorage.clear();
+                window.location.href = 'index.html';
+            }
+        };
+        
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('currentDate').textContent = new Date().toLocaleDateString('en-US', { 
+                month: 'long', day: 'numeric', year: 'numeric' 
+            });
+            loadUserInfo();
+            
+            // Close profile menu when clicking outside
+            document.addEventListener('click', function(event) {
+                const profileContainer = document.getElementById('profileContainer');
+                const profileMenu = document.getElementById('profileMenu');
+                
+                if (profileContainer && profileMenu && !profileContainer.contains(event.target) && profileMenu.classList.contains('show')) {
+                    profileMenu.classList.remove('show');
+                }
+            });
+        });
+    </script>
+</body>
+</html>

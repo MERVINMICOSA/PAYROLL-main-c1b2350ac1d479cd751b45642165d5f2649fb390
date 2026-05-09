@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Philtech GMA | Staff Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Security Scripts -->
+    <script src="js/csrf.js"></script>
+    <script src="js/xss-protection.js"></script>
+    <script src="js/secure-ajax.js"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #dcd3b8; }
+        .nav-link.active { background-color: #b0303b; color: white; }
+        .stat-card {
+            transition: all 0.3s ease;
+            background: white;
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 15px -3px rgba(176, 48, 59, 0.2);
+        }
+        .welcome-banner {
+            background: linear-gradient(135deg, #b0303b 0%, #8a1f27 100%);
+            border-radius: 24px;
+            padding: 32px;
+            color: white;
+        }
+        .info-card {
+            background: white;
+            border-radius: 16px;
+            padding: 20px;
+            border-left: 4px solid #b0303b;
+        }
+    </style>
+</head>
+<body class="text-gray-700 antialiased min-h-screen">
+
+    <!-- Top Navigation Bar - Staff Only -->
+    <nav class="bg-[#8a1f27] text-white px-6 py-3 flex justify-between items-center sticky top-0 z-50 shadow-md">
+        <div class="flex items-center gap-2">
+            <div class="w-8 h-8 bg-[#b0303b] rounded-lg flex items-center justify-center">
+                <i class="fa-solid fa-user-tie text-[#f4e8c1]"></i>
+            </div>
+            <span class="font-bold text-lg">Philtech GMA</span>
+        </div>
+        
+        <div class="hidden md:flex items-center gap-1">
+            <a href="dashboard-staff.html" class="nav-link active px-4 py-2 rounded-lg bg-[#b0303b] text-white font-medium">Dashboard</a>
+            <a href="my-attendance.html" class="nav-link px-4 py-2 rounded-lg hover:bg-[#d98989] transition-colors font-medium">My Attendance</a>
+            <a href="my-payslips.html" class="nav-link px-4 py-2 rounded-lg hover:bg-[#d98989] transition-colors font-medium">My Payslips</a>
+            <a href="profile.html" class="nav-link px-4 py-2 rounded-lg hover:bg-[#d98989] transition-colors font-medium">Profile</a>
+        </div>
+        
+        <div class="flex items-center gap-3">
+            <span class="text-sm hidden sm:block" id="userName">Staff</span>
+            <div class="relative group">
+                <img src="https://i.pravatar.cc/150?u=staff" id="profileImage" class="w-8 h-8 rounded-full border-2 border-white cursor-pointer">
+                <div class="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg py-1 hidden group-hover:block z-50">
+                    <a href="profile.html" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">My Profile</a>
+                    <a href="#" onclick="changePassword()" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Change Password</a>
+                    <hr class="my-1">
+                    <a href="#" onclick="logout()" class="block px-4 py-2 text-sm text-red-600 hover:bg-gray-100">Logout</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="p-6 md:p-8 max-w-7xl mx-auto">
+        
+        <!-- Welcome Banner -->
+        <div class="welcome-banner mb-8">
+            <div class="flex justify-between items-center">
+                <div>
+                    <h1 class="text-3xl font-bold mb-2" id="welcomeName">Welcome, Staff!</h1>
+                    <p class="text-white/80 text-lg">Admin Staff Portal</p>
+                    <p class="text-white/60 text-sm mt-2" id="currentDate"></p>
+                </div>
+                <div class="text-right">
+                    <i class="fa-solid fa-user-tie text-6xl opacity-50"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- Stats Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+            <div class="stat-card">
+                <div class="flex items-center gap-3 mb-3">
+                    <div class="w-10 h-10 rounded-lg bg-[#b0303b]/10 text-[#b0303b] flex items-center justify-center">
+                        <i class="fa-regular fa-clock"></i>
+                    </div>
+                    <span class="text-sm font-medium text-gray-500">Hours Worked</span>
+                </div>
+                <h2 class="text-2xl font-bold text-gray-800" id="totalHours">0</h2>
+                <p class="text-xs text-gray-500 mt-2">This month</p>
+            </div>
+            
+            <div class="stat-card">
+                <div class="flex items-center gap-3 mb-3">
+                    <div class="w-10 h-10 rounded-lg bg-[#b0303b]/10 text-[#b0303b] flex items-center justify-center">
+                        <i class="fa-solid fa-calendar-check"></i>
+                    </div>
+                    <span class="text-sm font-medium text-gray-500">Days Present</span>
+                </div>
+                <h2 class="text-2xl font-bold text-gray-800" id="daysPresent">0</h2>
+                <p class="text-xs text-gray-500 mt-2">This month</p>
+            </div>
+            
+            <div class="stat-card">
+                <div class="flex items-center gap-3 mb-3">
+                    <div class="w-10 h-10 rounded-lg bg-[#b0303b]/10 text-[#b0303b] flex items-center justify-center">
+                        <i class="fa-solid fa-money-bill-wave"></i>
+                    </div>
+                    <span class="text-sm font-medium text-gray-500">Monthly Salary</span>
+                </div>
+                <h2 class="text-2xl font-bold text-gray-800" id="monthlySalary">₱0</h2>
+                <p class="text-xs text-gray-500 mt-2">Current period</p>
+            </div>
+            
+            <div class="stat-card">
+                <div class="flex items-center gap-3 mb-3">
+                    <div class="w-10 h-10 rounded-lg bg-[#b0303b]/10 text-[#b0303b] flex items-center justify-center">
+                        <i class="fa-regular fa-calendar"></i>
+                    </div>
+                    <span class="text-sm font-medium text-gray-500">Leave Balance</span>
+                </div>
+                <h2 class="text-2xl font-bold text-gray-800" id="leaveBalance">15</h2>
+                <p class="text-xs text-gray-500 mt-2">Sick & Vacation leaves</p>
+            </div>
+        </div>
+
+        <!-- Quick Links -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <a href="my-attendance.html" class="info-card hover:shadow-lg transition-shadow">
+                <div class="flex items-center gap-3 mb-2">
+                    <i class="fa-regular fa-clock text-2xl text-[#b0303b]"></i>
+                    <h3 class="font-semibold text-gray-800">My Attendance</h3>
+                </div>
+                <p class="text-gray-500 text-sm">View your daily time records and attendance history</p>
+                <span class="text-[#b0303b] text-sm mt-3 inline-block">View Details →</span>
+            </a>
+            
+            <a href="my-payslips.html" class="info-card hover:shadow-lg transition-shadow">
+                <div class="flex items-center gap-3 mb-2">
+                    <i class="fa-solid fa-file-invoice-dollar text-2xl text-[#b0303b]"></i>
+                    <h3 class="font-semibold text-gray-800">My Payslips</h3>
+                </div>
+                <p class="text-gray-500 text-sm">Download and view your monthly payslips</p>
+                <span class="text-[#b0303b] text-sm mt-3 inline-block">View Details →</span>
+            </a>
+            
+            <a href="profile.html" class="info-card hover:shadow-lg transition-shadow">
+                <div class="flex items-center gap-3 mb-2">
+                    <i class="fa-regular fa-user text-2xl text-[#b0303b]"></i>
+                    <h3 class="font-semibold text-gray-800">My Profile</h3>
+                </div>
+                <p class="text-gray-500 text-sm">Update your personal information and settings</p>
+                <span class="text-[#b0303b] text-sm mt-3 inline-block">View Details →</span>
+            </a>
+        </div>
+
+        <!-- Recent Payslips -->
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+            <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center">
+                <h3 class="font-semibold text-gray-800">Recent Payslips</h3>
+                <a href="my-payslips.html" class="text-sm text-[#b0303b] hover:text-[#8a1f27]">View All</a>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left">
+                    <thead class="bg-gray-50 text-xs text-gray-500">
+                        <tr>
+                            <th class="py-3 px-6">Period</th>
+                            <th class="py-3">Gross Pay</th>
+                            <th class="py-3">Deductions</th>
+                            <th class="py-3">Net Pay</th>
+                            <th class="py-3">Status</th>
+                            <th class="py-3">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody class="text-sm" id="recentPayslips">
+                        <tr><td colspan="6" class="py-8 text-center text-gray-400">Loading...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <script src="js/database.js"></script>
+    <script src="js/navigation.js"></script>
+    <script>
+        let employeeId = null;
+        
+        // Set current date
+        document.getElementById('currentDate').textContent = new Date().toLocaleDateString('en-US', { 
+            month: 'long', day: 'numeric', year: 'numeric' 
+        });
+        
+        // Get logged in user
+        const user = JSON.parse(localStorage.getItem('user') || '{}');
+        employeeId = user.linked_employee || localStorage.getItem('employeeId');
+        
+        document.getElementById('userName').textContent = user.name || 'Staff';
+        document.getElementById('welcomeName').textContent = `Welcome, ${user.name || 'Staff'}!`;
+        
+        // Load dashboard data
+        async function loadDashboardData() {
+            try {
+                await Database.ensureDatabaseReady();
+                
+                // Get employee data
+                let employee = null;
+                if (employeeId) {
+                    employee = await Database.getEmployeeById(employeeId);
+                }
+                
+                if (employee) {
+                    // Set monthly salary based on rate
+                    let monthlySalary = 0;
+                    if (employee.assignment === 'admin') {
+                        monthlySalary = (employee.rate_admin || 70) * 8 * 22; // 8 hours/day, 22 days
+                    } else {
+                        monthlySalary = (employee.rate_admin || 70) * 8 * 22;
+                    }
+                    document.getElementById('monthlySalary').textContent = '₱' + monthlySalary.toLocaleString();
+                }
+                
+                // Get attendance records
+                const attendance = await Database.getAttendanceByEmployee(employeeId);
+                const currentMonth = new Date().getMonth();
+                const currentYear = new Date().getFullYear();
+                
+                const monthAttendance = attendance.filter(a => {
+                    const date = new Date(a.date);
+                    return date.getMonth() === currentMonth && date.getFullYear() === currentYear;
+                });
+                
+                const totalHours = monthAttendance.reduce((sum, a) => sum + (a.hours_attended || 0), 0);
+                const daysPresent = monthAttendance.length;
+                
+                document.getElementById('totalHours').textContent = totalHours.toFixed(1);
+                document.getElementById('daysPresent').textContent = daysPresent;
+                
+                // Get payroll records
+                const payroll = await Database.getAllPayroll();
+                const userPayroll = payroll.filter(p => p.employee_id === parseInt(employeeId)).slice(-3);
+                
+                const tbody = document.getElementById('recentPayslips');
+                if (userPayroll.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="6" class="py-8 text-center text-gray-400">No payslips found</td></tr>';
+                } else {
+                    tbody.innerHTML = userPayroll.map(p => {
+                        let statusBadge = '';
+                        if (p.status === 'Approved') {
+                            statusBadge = '<span class="bg-green-100 text-green-600 px-2 py-1 rounded-full text-xs">Approved</span>';
+                        } else {
+                            statusBadge = '<span class="bg-yellow-100 text-yellow-600 px-2 py-1 rounded-full text-xs">Pending</span>';
+                        }
+                        
+                        return `
+                            <tr class="border-b hover:bg-gray-50">
+                                <td class="py-3 px-6">${p.period || 'N/A'}</td>
+                                <td class="py-3">₱${(p.gross_salary || 0).toLocaleString()}</td>
+                                <td class="py-3">₱${(p.total_deduction || 0).toLocaleString()}</td>
+                                <td class="py-3 font-medium text-[#b0303b]">₱${(p.net_salary || 0).toLocaleString()}</td>
+                                <td class="py-3">${statusBadge}</td>
+                                <td class="py-3">
+                                    ${p.status === 'Approved' ? `<button onclick="downloadPayslip(${p.id})" class="text-[#b0303b] hover:text-[#8a1f27]"><i class="fa-solid fa-download"></i></button>` : '—'}
+                                </td>
+                            </tr>
+                        `;
+                    }).join('');
+                }
+                
+            } catch (error) {
+                console.error('Error loading dashboard:', error);
+            }
+        }
+        
+        function downloadPayslip(id) {
+            window.open(`payslip.html?id=${id}`, '_blank');
+        }
+        
+        function changePassword() {
+            window.location.href = 'change-password.html';
+        }
+        
+        function logout() {
+            localStorage.clear();
+            window.location.href = 'index.html';
+        }
+        
+        // Load data on page load
+        document.addEventListener('DOMContentLoaded', loadDashboardData);
+    </script>
+</body>
+</html>

@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Edit Payroll - Philtech GMA</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <link rel="stylesheet" href="css/global.css" />
+  <link rel="stylesheet" href="css/payroll.css" />
+  <!-- Security Scripts -->
+  <script src="js/csrf.js"></script>
+  <script src="js/xss-protection.js"></script>
+  <script src="js/secure-ajax.js"></script>
+  <style>
+    .form-wrapper {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: calc(100vh - 80px);
+      padding: 20px;
+    }
+    
+    .form-card {
+      background: white;
+      padding: 30px;
+      border-radius: 15px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+      width: 100%;
+      max-width: 500px;
+    }
+    
+    .form-card h2 {
+      text-align: center;
+      color: #b0303b;
+      margin-bottom: 20px;
+    }
+    
+    .form-group {
+      margin-bottom: 15px;
+    }
+    
+    .form-group label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: bold;
+      color: #333;
+    }
+    
+    .form-group input,
+    .form-group select {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      font-size: 14px;
+      box-sizing: border-box;
+    }
+    
+    .form-group input:read-only {
+      background-color: #f5f5f5;
+    }
+    
+    .employee-info {
+      text-align: center;
+      margin-bottom: 20px;
+      padding: 15px;
+      background: rgba(232, 215, 159, 0.3);
+      border-radius: 10px;
+    }
+    
+    .employee-info h3 {
+      color: #b0303b;
+      margin: 0;
+    }
+    
+    .form-buttons {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      margin-top: 20px;
+    }
+    
+    .save-btn {
+      background: #28a745;
+      color: white;
+      border: none;
+      padding: 12px 30px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 16px;
+    }
+    
+    .cancel-btn {
+      background: #6c757d;
+      color: white;
+      border: none;
+      padding: 12px 30px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 16px;
+    }
+    
+    .back-btn {
+      background: #6c757d;
+      color: white;
+      border: none;
+      padding: 8px 15px;
+      border-radius: 5px;
+      cursor: pointer;
+      margin-left: auto;
+    }
+
+    /* Add to existing style section */
+    .group:hover .group-hover\:block {
+        display: block !important;
+    }
+
+    .user-dropdown {
+        position: absolute;
+        right: 0;
+        margin-top: 0.5rem;
+        width: 12rem;
+        background-color: white;
+        border-radius: 0.5rem;
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        padding: 0.5rem 0;
+        z-index: 50;
+        display: none;
+    }
+
+    .group:hover .user-dropdown {
+        display: block;
+    }
+  </style>
+</head>
+<body>
+
+<header class="top-bar">
+  <div class="logo-section">
+    <img src="assets/images/logo.png" class="logo" alt="Logo">
+    <h1>Philtech GMA</h1>
+  </div>
+  <button class="back-btn" onclick="goBack()">← Back</button>
+</header>
+
+<main class="form-wrapper">
+
+  <div class="form-card">
+
+    <h2>Edit Payroll</h2>
+
+    <form id="payrollForm">
+      <input type="hidden" id="payrollId">
+      
+      <div class="employee-info">
+        <h3 id="employeeName">Employee Name</h3>
+        <p id="payrollPeriod">Payroll Period</p>
+      </div>
+
+      <div class="form-group">
+        <label for="grossSalary">Gross Salary (₱)</label>
+        <input type="number" id="grossSalary" step="0.01" min="0" required>
+      </div>
+
+      <div class="form-group">
+        <label for="sss">SSS (₱)</label>
+        <input type="number" id="sss" step="0.01" min="0" value="0">
+      </div>
+
+      <div class="form-group">
+        <label for="pagibig">Pag-IBIG (₱)</label>
+        <input type="number" id="pagibig" step="0.01" min="0" value="0">
+      </div>
+
+      <div class="form-group">
+        <label for="philhealth">Philhealth (₱)</label>
+        <input type="number" id="philhealth" step="0.01" min="0" value="0">
+      </div>
+
+      <div class="form-group">
+        <label for="adminPayRate">Admin Pay Rate (₱)</label>
+        <input type="number" id="adminPayRate" step="0.01" min="0" value="0">
+      </div>
+
+      <div class="form-group">
+        <label for="totalDeduction">Total Deduction (₱)</label>
+        <input type="number" id="totalDeduction" step="0.01" min="0" required>
+      </div>
+
+      <div class="form-group">
+        <label>Additional Deductions</label>
+        <div id="additionalDeductions"></div>
+        <button type="button" onclick="addDeductionRow()" style="margin-top: 5px; padding: 5px 10px; cursor: pointer;">+ Add Deduction</button>
+      </div>
+
+      <div class="form-group">
+        <label for="netSalary">Net Salary (₱)</label>
+        <input type="number" id="netSalary" step="0.01" min="0" readonly>
+      </div>
+
+      <div class="form-group">
+        <label for="status">Status</label>
+        <select id="status" required>
+          <option value="Pending">Pending</option>
+          <option value="Paid">Paid</option>
+        </select>
+      </div>
+
+      <div class="form-buttons">
+        <button type="submit" class="save-btn">Update</button>
+        <button type="button" class="cancel-btn" onclick="goBack()">Cancel</button>
+      </div>
+
+    </form>
+
+  </div>
+
+</main>
+<script src="js/api-integration.js"></script>
+<script src="js/database.js"></script>
+<script src="js/navigation.js"></script>
+<script src="js/edit-payrollSadmin.js"></script>
+</body>
+</html>
+

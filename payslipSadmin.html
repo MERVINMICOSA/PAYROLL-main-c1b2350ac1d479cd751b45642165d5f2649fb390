@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Philtech GMA | Payslip (Superadmin)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js" integrity="sha512-GsLlZN/3F2ErC5ifS5QtgpiJtWd43JWSuIgh7mbzZ8zBps+dvLusV+eNQATqgA/HdeKFVgA5v3S/cIrLF7QnIg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <!-- Security Scripts -->
+    <script src="js/csrf.js"></script>
+    <script src="js/xss-protection.js"></script>
+    <script src="js/secure-ajax.js"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #dcd3b8; }
+        .nav-link.active { background-color: #b0303b; color: white; }
+        
+        .payslip-container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+        
+        .payslip-header {
+            background: linear-gradient(135deg, #b0303b 0%, #8a1f27 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .payslip-body {
+            padding: 30px;
+        }
+        
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px 0;
+            border-bottom: 1px dashed #e5e7eb;
+        }
+        
+        .info-label {
+            color: #6b7280;
+            font-weight: 500;
+        }
+        
+        .info-value {
+            font-weight: 600;
+            color: #1f2937;
+        }
+        
+        .salary-table {
+            width: 100%;
+            margin: 20px 0;
+            border-collapse: collapse;
+        }
+        
+        .salary-table td {
+            padding: 12px 0;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        
+        .salary-table td:first-child {
+            color: #6b7280;
+        }
+        
+        .salary-table td:last-child {
+            text-align: right;
+            font-weight: 600;
+        }
+        
+        .total-row {
+            background-color: #fef3c7;
+            font-weight: bold;
+        }
+        
+        .total-row td {
+            padding: 15px 0;
+            border-bottom: 2px solid #b0303b;
+        }
+        
+        .total-row td:last-child {
+            color: #b0303b;
+            font-size: 1.25rem;
+        }
+        
+        .print-btn, .download-btn {
+            background-color: #b0303b;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: none;
+            margin: 0 8px;
+        }
+        
+        .print-btn:hover, .download-btn:hover {
+            background-color: #8a1f27;
+            transform: translateY(-2px);
+        }
+        
+        @media print {
+            body {
+                background-color: white;
+                padding: 0;
+                margin: 0;
+            }
+            .no-print {
+                display: none !important;
+            }
+            .payslip-container {
+                box-shadow: none;
+                margin: 0;
+            }
+        }
+    </style>
+</head>
+<body class="text-gray-700 antialiased min-h-screen">
+
+    <nav class="bg-[#8a1f27] text-white px-6 py-3 flex justify-between items-center sticky top-0 z-50 shadow-md no-print">
+        <div class="flex items-center gap-2">
+            <div class="w-8 h-8 bg-[#b0303b] rounded-lg flex items-center justify-center">
+                <i class="fa-solid fa-crown text-[#f4e8c1]"></i>
+            </div>
+            <span class="font-bold text-lg">Philtech GMA - Superadmin</span>
+        </div>
+        
+        <div class="hidden md:flex items-center gap-1">
+            <a href="dashboardSadmin.html" class="nav-link px-4 py-2 rounded-lg hover:bg-[#d98989] transition-colors font-medium">Dashboard</a>
+            <a href="employeesSadmin.html" class="nav-link px-4 py-2 rounded-lg hover:bg-[#d98989] transition-colors font-medium">Employees</a>
+            <a href="payrollSadmin.html" class="nav-link px-4 py-2 rounded-lg hover:bg-[#d98989] transition-colors font-medium">Payroll</a>
+            <a href="user-mgmt.html" class="nav-link px-4 py-2 rounded-lg hover:bg-[#d98989] transition-colors font-medium">Users</a>
+            <a href="settingsSadmin.html" class="nav-link px-4 py-2 rounded-lg hover:bg-[#d98989] transition-colors font-medium">Settings</a>
+        </div>
+        
+        <div class="flex items-center gap-3">
+            <span class="text-sm hidden sm:block" id="userName">Superadmin</span>
+            <div class="relative group">
+                <img src="https://i.pravatar.cc/150?u=superadmin" class="w-8 h-8 rounded-full border-2 border-white cursor-pointer">
+                <div class="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg py-1 hidden group-hover:block z-50">
+                    <a href="#" onclick="logout()" class="block px-4 py-2 text-sm text-red-600 hover:bg-gray-100">Logout</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="p-6 md:p-8 max-w-4xl mx-auto">
+        <div class="flex justify-between items-center mb-6 no-print">
+            <div>
+                <h1 class="text-2xl font-bold text-[#8a1f27]">Payslip (Superadmin View)</h1>
+                <p class="text-gray-500 text-sm mt-1" id="currentDate"></p>
+            </div>
+            <div>
+                <button onclick="downloadPDF()" class="download-btn"><i class="fa-solid fa-download mr-2"></i>Download PDF</button>
+                <button onclick="window.print()" class="print-btn"><i class="fa-solid fa-print mr-2"></i>Print</button>
+                <button onclick="goBack()" class="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg ml-2 hover:bg-gray-300 transition-colors">Back</button>
+            </div>
+        </div>
+
+        <div id="payslipContainer" class="payslip-container">
+            <div class="payslip-header">
+                <h2 class="text-2xl font-bold">Philtech GMA</h2>
+                <p class="text-white/80 mt-1">Payroll Management System</p>
+                <p class="text-white/60 text-sm mt-2">Official Payslip</p>
+            </div>
+            
+            <div class="payslip-body" id="payslipContent">
+                <div class="text-center mb-6">
+                    <div class="inline-block bg-gray-100 rounded-full px-4 py-1 text-sm text-gray-600" id="payslipStatus">Loading...</div>
+                </div>
+                
+                <div class="info-row">
+                    <span class="info-label">Employee Name:</span>
+                    <span class="info-value" id="empName">---</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Employee ID:</span>
+                    <span class="info-value" id="empId">---</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Position:</span>
+                    <span class="info-value" id="empPosition">---</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Payroll Period:</span>
+                    <span class="info-value" id="payrollPeriod">---</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Generated On:</span>
+                    <span class="info-value" id="generatedDate">---</span>
+                </div>
+                <div class="info-row" id="approvedByRow" style="display: none;">
+                    <span class="info-label">Approved By:</span>
+                    <span class="info-value" id="approvedBy">---</span>
+                </div>
+                
+                <table class="salary-table" id="salaryTable">
+                    <tbody>
+                        <tr>
+                            <td>Basic Salary</td>
+                            <td id="basicSalary">₱0.00</td>
+                        </tr>
+                        <tr>
+                            <td>Overtime Pay</td>
+                            <td id="overtimePay">₱0.00</td>
+                        </tr>
+                        <tr>
+                            <td>Admin Pay</td>
+                            <td id="adminPay">₱0.00</td>
+                        </tr>
+                        <tr>
+                            <td class="font-semibold">Gross Salary</td>
+                            <td class="font-semibold" id="grossSalary">₱0.00</td>
+                        </tr>
+                        <tr>
+                            <td colspan="2" class="text-gray-500 text-sm pt-4">Deductions:</td>
+                        </tr>
+                        <tr>
+                            <td class="pl-4">SSS Contribution</td>
+                            <td id="sss">₱0.00</td>
+                        </tr>
+                        <tr>
+                            <td class="pl-4">PhilHealth Contribution</td>
+                            <td id="philhealth">₱0.00</td>
+                        </tr>
+                        <tr>
+                            <td class="pl-4">Pag-IBIG Contribution</td>
+                            <td id="pagibig">₱0.00</td>
+                        </tr>
+                        <tr>
+                            <td class="pl-4">Withholding Tax</td>
+                            <td id="tax">₱0.00</td>
+                        </tr>
+                        <tr>
+                            <td class="pl-4">Undertime Deduction</td>
+                            <td id="undertime">₱0.00</td>
+                        </tr>
+                        <tr class="total-row">
+                            <td class="font-bold">Total Deductions</td>
+                            <td class="font-bold" id="totalDeductions">₱0.00</td>
+                        </tr>
+                        <tr class="total-row" style="background-color: #fef3c7;">
+                            <td class="font-bold text-lg">NET PAY</td>
+                            <td class="font-bold text-xl text-[#b0303b]" id="netSalary">₱0.00</td>
+                        </tr>
+                    </tbody>
+                </table>
+                
+                <div class="mt-6 pt-4 border-t border-gray-200 text-center text-gray-400 text-sm">
+                    <p>This is a computer-generated payslip. No signature required.</p>
+                    <p class="mt-1">For inquiries, please contact the HR/Payroll Department.</p>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="js/api-integration.js"></script>
+    <script src="js/database.js"></script>
+    <script src="js/navigation.js"></script>
+    <script>
+        let currentPayroll = null;
+        let currentEmployee = null;
+
+        function waitForDatabase(callback, retries = 15) {
+            if (typeof Database !== 'undefined' && Database.ensureDatabaseReady) {
+                Database.ensureDatabaseReady().then(callback).catch(() => {
+                    if (retries > 0) setTimeout(() => waitForDatabase(callback, retries - 1), 200);
+                });
+            } else if (retries > 0) {
+                setTimeout(() => waitForDatabase(callback, retries - 1), 200);
+            } else {
+                document.getElementById('payslipContent').innerHTML = '<div class="text-center text-red-500 py-8">Database not loaded. Please refresh.</div>';
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('currentDate').textContent = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+            document.getElementById('generatedDate').textContent = new Date().toLocaleString();
+            
+            waitForDatabase(async function() {
+                try {
+                    await Database.ensureDatabaseReady();
+                    await loadPayslipData();
+                } catch (error) {
+                    console.error('Error loading payslip:', error);
+                    document.getElementById('payslipContent').innerHTML = '<div class="text-center text-red-500 py-8">Error loading payslip data</div>';
+                }
+            });
+        });
+
+        async function loadPayslipData() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const payrollId = parseInt(urlParams.get('id'));
+            
+            if (!payrollId) {
+                document.getElementById('payslipContent').innerHTML = '<div class="text-center text-red-500 py-8">No payroll ID provided</div>';
+                return;
+            }
+            
+            const allPayroll = await Database.getAllPayroll();
+            currentPayroll = allPayroll.find(p => p.id === payrollId);
+            
+            if (!currentPayroll) {
+                document.getElementById('payslipContent').innerHTML = '<div class="text-center text-red-500 py-8">Payroll record not found</div>';
+                return;
+            }
+            
+            if (currentPayroll.status === 'Approved') {
+                document.getElementById('payslipStatus').innerHTML = 'Approved';
+                document.getElementById('payslipStatus').classList.add('bg-green-100', 'text-green-600');
+                if (currentPayroll.approved_by) {
+                    document.getElementById('approvedByRow').style.display = 'flex';
+                    document.getElementById('approvedBy').textContent = currentPayroll.approved_by;
+                }
+            } else if (currentPayroll.status === 'Pending') {
+                document.getElementById('payslipStatus').innerHTML = 'Pending Approval';
+                document.getElementById('payslipStatus').classList.add('bg-yellow-100', 'text-yellow-600');
+            } else if (currentPayroll.status === 'Rejected') {
+                document.getElementById('payslipStatus').innerHTML = 'Rejected';
+                document.getElementById('payslipStatus').classList.add('bg-red-100', 'text-red-600');
+            } else {
+                document.getElementById('payslipStatus').innerHTML = currentPayroll.status || 'Draft';
+                document.getElementById('payslipStatus').classList.add('bg-gray-100', 'text-gray-600');
+            }
+            
+            const allEmployees = await Database.getAllEmployees();
+            currentEmployee = allEmployees.find(e => e.id === currentPayroll.employee_id);
+            
+            if (!currentEmployee) {
+                document.getElementById('empName').textContent = 'Unknown Employee';
+            } else {
+                document.getElementById('empName').textContent = currentEmployee.full_name || 'Unknown';
+                document.getElementById('empId').textContent = currentEmployee.employee_id || 'EMP' + currentEmployee.id;
+                document.getElementById('empPosition').textContent = currentEmployee.position || 'Employee';
+            }
+            
+            document.getElementById('payrollPeriod').textContent = currentPayroll.period || 'N/A';
+            
+            const basicSalary = currentPayroll.gross_salary - (currentPayroll.overtime_pay || 0) - (currentPayroll.admin_pay || 0);
+            document.getElementById('basicSalary').textContent = '₱' + (basicSalary || 0).toLocaleString();
+            document.getElementById('overtimePay').textContent = '₱' + (currentPayroll.overtime_pay || 0).toLocaleString();
+            document.getElementById('adminPay').textContent = '₱' + (currentPayroll.admin_pay || 0).toLocaleString();
+            document.getElementById('grossSalary').textContent = '₱' + (currentPayroll.gross_salary || 0).toLocaleString();
+            document.getElementById('sss').textContent = '₱' + (currentPayroll.sss || 0).toLocaleString();
+            document.getElementById('philhealth').textContent = '₱' + (currentPayroll.philhealth || 0).toLocaleString();
+            document.getElementById('pagibig').textContent = '₱' + (currentPayroll.pagibig || 0).toLocaleString();
+            document.getElementById('tax').textContent = '₱' + (currentPayroll.withholding_tax || 0).toLocaleString();
+            document.getElementById('undertime').textContent = '₱' + (currentPayroll.undertime_deduction || 0).toLocaleString();
+            document.getElementById('totalDeductions').textContent = '₱' + (currentPayroll.total_deduction || 0).toLocaleString();
+            document.getElementById('netSalary').textContent = '₱' + (currentPayroll.net_salary || 0).toLocaleString();
+        }
+
+        function downloadPDF() {
+            if (!currentPayroll) return;
+            if (currentPayroll.status !== 'Approved') {
+                alert('This payslip is not approved. Cannot download.');
+                return;
+            }
+            
+            const element = document.getElementById('payslipContainer');
+            const opt = {
+                margin: [0.5, 0.5, 0.5, 0.5],
+                filename: `Payslip_${currentEmployee?.full_name?.replace(/\s/g, '_') || 'Employee'}_${currentPayroll.period?.replace(/\s/g, '_') || 'Period'}.pdf`,
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2, letterRendering: true },
+                jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
+            };
+            html2pdf().set(opt).from(element).save();
+        }
+
+        function goBack() {
+            window.location.href = 'payrollSadmin.html';
+        }
+
+        function logout() {
+            localStorage.clear();
+            window.location.href = 'index.html';
+        }
+    </script>
+</body>
+</html>

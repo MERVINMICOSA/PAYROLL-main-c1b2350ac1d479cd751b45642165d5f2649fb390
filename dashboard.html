@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <title>Philtech GMA | Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #dcd3b8; }
+        .stat-card { transition: all 0.3s ease; }
+        .stat-card:hover { transform: translateY(-5px); box-shadow: 0 10px 25px -5px rgba(176, 48, 59, 0.2); }
+        .nav-link.active { background-color: #b0303b; color: white; }
+        
+        .toggle-money-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: #b0303b;
+            font-size: 1.2rem;
+            margin-left: 8px;
+            transition: all 0.3s;
+        }
+        .toggle-money-btn:hover {
+            color: #8a1f27;
+            transform: scale(1.1);
+        }
+        .money-blur {
+            filter: blur(5px);
+            transition: filter 0.3s ease;
+        }
+        .money-visible {
+            filter: blur(0);
+        }
+    </style>
+</head>
+<body class="text-gray-700 antialiased min-h-screen">
+
+    <nav class="bg-[#8a1f27] text-white px-6 py-3 flex justify-between items-center sticky top-0 z-50 shadow-md">
+        <div class="flex items-center gap-2">
+            <div class="w-8 h-8 bg-[#b0303b] rounded-lg flex items-center justify-center">
+                <i class="fa-solid fa-file-invoice text-[#f4e8c1]"></i>
+            </div>
+            <span class="font-bold text-lg">Philtech GMA</span>
+        </div>
+        
+        <div class="hidden md:flex items-center gap-1">
+            <a href="dashboard.html" class="nav-link active px-4 py-2 rounded-lg bg-[#b0303b] text-white font-medium">Dashboard</a>
+            <a href="employees.html" class="nav-link px-4 py-2 rounded-lg hover:bg-[#d98989] transition-colors font-medium">Employees</a>
+            <a href="payroll.html" class="nav-link px-4 py-2 rounded-lg hover:bg-[#d98989] transition-colors font-medium">Payroll</a>
+            <a href="attendance.html" class="nav-link px-4 py-2 rounded-lg hover:bg-[#d98989] transition-colors font-medium">Attendance</a>
+            <a href="settings.html" class="nav-link px-4 py-2 rounded-lg hover:bg-[#d98989] transition-colors font-medium">Settings</a>
+        </div>
+        
+        <div class="flex items-center gap-3">
+            <span class="text-sm hidden sm:block" id="userName">Accountant</span>
+            <div class="relative group">
+                <img src="https://i.pravatar.cc/150?u=accountant" class="w-8 h-8 rounded-full border-2 border-white cursor-pointer">
+                <div class="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg py-1 hidden group-hover:block z-50">
+                    <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Profile</a>
+                    <a href="#" onclick="logout()" class="block px-4 py-2 text-sm text-red-600 hover:bg-gray-100">Logout</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="p-6 md:p-8 max-w-7xl mx-auto">
+        
+        <div class="flex justify-between items-center mb-8">
+            <div>
+                <h1 class="text-2xl font-bold text-[#8a1f27]">Dashboard</h1>
+                <p class="text-gray-500 text-sm mt-1" id="currentDate"></p>
+            </div>
+            <button onclick="refreshDashboard()" class="bg-white px-4 py-2 rounded-lg text-sm font-medium shadow-sm hover:shadow-md transition-shadow flex items-center gap-2">
+                <i class="fa-solid fa-rotate-right text-[#b0303b]"></i> Refresh
+            </button>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 stat-card">
+                <div class="flex items-center gap-3 mb-3">
+                    <div class="w-10 h-10 rounded-lg bg-[#b0303b]/10 text-[#b0303b] flex items-center justify-center">
+                        <i class="fa-solid fa-users"></i>
+                    </div>
+                    <span class="text-sm font-medium text-gray-500">Total Employees</span>
+                </div>
+                <h2 class="text-2xl font-bold text-gray-800" id="totalEmployees">0</h2>
+                <p class="text-xs text-[#b0303b] mt-2"><i class="fa-solid fa-arrow-up mr-1"></i> Active employees</p>
+            </div>
+
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 stat-card">
+                <div class="flex items-center justify-between mb-3">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-lg bg-[#b0303b]/10 text-[#b0303b] flex items-center justify-center">
+                            <i class="fa-solid fa-money-bill-wave"></i>
+                        </div>
+                        <span class="text-sm font-medium text-gray-500">Monthly Payroll</span>
+                    </div>
+                    <button onclick="toggleMoneyVisibility()" class="toggle-money-btn">
+                        <i class="fa-regular fa-eye-slash" id="moneyToggleIcon"></i>
+                    </button>
+                </div>
+                <h2 class="text-2xl font-bold text-gray-800 money-blur" id="monthlyPayroll">₱0</h2>
+                <p class="text-xs text-green-600 mt-2">Current period</p>
+            </div>
+
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 stat-card">
+                <div class="flex items-center justify-between mb-3">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-lg bg-[#b0303b]/10 text-[#b0303b] flex items-center justify-center">
+                            <i class="fa-regular fa-clock"></i>
+                        </div>
+                        <span class="text-sm font-medium text-gray-500">Pending Payroll</span>
+                    </div>
+                    <button onclick="toggleMoneyVisibility()" class="toggle-money-btn">
+                        <i class="fa-regular fa-eye-slash"></i>
+                    </button>
+                </div>
+                <h2 class="text-2xl font-bold text-gray-800 money-blur" id="pendingPayroll">0</h2>
+                <p class="text-xs text-yellow-600 mt-2">Needs approval</p>
+            </div>
+
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 stat-card">
+                <div class="flex items-center justify-between mb-3">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-lg bg-[#b0303b]/10 text-[#b0303b] flex items-center justify-center">
+                            <i class="fa-solid fa-arrow-down"></i>
+                        </div>
+                        <span class="text-sm font-medium text-gray-500">Total Deductions</span>
+                    </div>
+                    <button onclick="toggleMoneyVisibility()" class="toggle-money-btn">
+                        <i class="fa-regular fa-eye-slash"></i>
+                    </button>
+                </div>
+                <h2 class="text-2xl font-bold text-gray-800 money-blur" id="totalDeductions">₱0</h2>
+                <p class="text-xs text-gray-500 mt-2">Tax, Benefits, etc.</p>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+            <div class="lg:col-span-2 bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                <h3 class="font-semibold text-gray-800 mb-4">Payroll Trend (Monthly)</h3>
+                <div class="h-64">
+                    <canvas id="payrollChart"></canvas>
+                </div>
+            </div>
+
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                <h3 class="font-semibold text-gray-800 mb-4">Employee Type</h3>
+                <div class="h-64">
+                    <canvas id="employeeChart"></canvas>
+                </div>
+                <div class="mt-4 text-center text-xs text-gray-500" id="chartLegend"></div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+            <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center">
+                <h3 class="font-semibold text-gray-800">Recent Payroll</h3>
+                <a href="payroll.html" class="text-sm text-[#b0303b] hover:text-[#8a1f27]">View All →</a>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left">
+                    <thead class="bg-gray-50 text-xs text-gray-500">
+                        <tr><th class="py-3 px-6">Employee</th><th class="py-3">Period</th><th class="py-3">Gross</th><th class="py-3">Deductions</th><th class="py-3">Net</th><th class="py-3">Status</th></tr>
+                    </thead>
+                    <tbody class="text-sm" id="recentPayrollTable"><tr><td colspan="6" class="py-8 text-center text-gray-400">Loading...<\/td><\/tr></tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <script src="js/navigation.js?v=2"></script>
+    
+    <script>
+        let allEmployees = [];
+        let allPayroll = [];
+        let payrollChart = null;
+        let employeeChart = null;
+        let moneyVisible = false;
+
+        // Load employees from API
+        async function loadEmployeesFromAPI() {
+            try {
+                const response = await fetch('/api/employees.php', {
+                    credentials: 'include'
+                });
+                if (!response.ok) {
+                    const text = await response.text();
+                    console.error('employees.php error', response.status, text.substring(0,200));
+                    return [];
+                }
+                return await response.json();
+            } catch (error) {
+                console.error("Error loading employees:", error);
+            }
+            return [];
+        }
+
+        // Load payroll from API
+        async function loadPayrollFromAPI() {
+            try {
+                const response = await fetch('/api/payroll.php', {
+                    credentials: 'include'
+                });
+                if (!response.ok) {
+                    const text = await response.text();
+                    console.error('payroll.php error', response.status, text.substring(0,200));
+                    return [];
+                }
+                return await response.json();
+            } catch (error) {
+                console.error("Error loading payroll:", error);
+            }
+            return [];
+        }
+        
+        window.toggleMoneyVisibility = () => {
+            moneyVisible = !moneyVisible;
+            document.querySelectorAll('.money-blur, .money-visible').forEach(el => {
+                if (moneyVisible) {
+                    el.classList.remove('money-blur');
+                    el.classList.add('money-visible');
+                } else {
+                    el.classList.remove('money-visible');
+                    el.classList.add('money-blur');
+                }
+            });
+            document.querySelectorAll('.toggle-money-btn i').forEach(icon => {
+                if (moneyVisible) {
+                    icon.classList.remove('fa-eye-slash');
+                    icon.classList.add('fa-eye');
+                } else {
+                    icon.classList.remove('fa-eye');
+                    icon.classList.add('fa-eye-slash');
+                }
+            });
+        };
+        
+        async function loadDashboardData() {
+            console.log("Loading dashboard data...");
+            
+            allEmployees = await loadEmployeesFromAPI();
+            allPayroll = await loadPayrollFromAPI();
+            
+            console.log("Employees:", allEmployees.length);
+            console.log("Payroll:", allPayroll.length);
+            
+            document.getElementById('totalEmployees').textContent = allEmployees.length;
+            
+            const currentMonth = new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+            const monthlyTotal = allPayroll.filter(p => p.period === currentMonth).reduce((sum, p) => sum + parseFloat(p.net_salary || 0), 0);
+            document.getElementById('monthlyPayroll').innerHTML = '₱' + monthlyTotal.toLocaleString();
+            
+            const pendingCount = allPayroll.filter(p => p.status === 'Pending').length;
+            document.getElementById('pendingPayroll').textContent = pendingCount;
+            
+            const deductions = allPayroll.reduce((sum, p) => sum + parseFloat(p.total_deduction || 0), 0);
+            document.getElementById('totalDeductions').innerHTML = '₱' + deductions.toLocaleString();
+            
+            const recent = [...allPayroll].reverse().slice(0, 5);
+            const tbody = document.getElementById('recentPayrollTable');
+            if (recent.length === 0) {
+                tbody.innerHTML = '<td colspan="6" class="py-8 text-center text-gray-400">No payroll records found<\/td><\/tr>';
+            } else {
+                tbody.innerHTML = recent.map(p => {
+                    const emp = allEmployees.find(e => e.id === p.employee_id) || { full_name: 'Unknown' };
+                    let statusClass = 'bg-yellow-100 text-yellow-600';
+                    if (p.status === 'Approved') statusClass = 'bg-green-100 text-green-600';
+                    return `<tr class="border-b hover:bg-gray-50">
+                        <td class="py-3 px-6 font-medium">${escapeHtml(emp.full_name)}<\/td>
+                        <td class="py-3">${p.period || 'N/A'}<\/td>
+                        <td class="py-3">₱${(p.gross_salary || 0).toLocaleString()}<\/td>
+                        <td class="py-3">₱${(p.total_deduction || 0).toLocaleString()}<\/td>
+                        <td class="py-3 font-medium text-[#b0303b]">₱${(p.net_salary || 0).toLocaleString()}<\/td>
+                        <td class="py-3"><span class="px-2 py-1 rounded-full text-xs ${statusClass}">${p.status || 'Pending'}<\/span><\/td>
+                    <\/tr>`;
+                }).join('');
+            }
+            
+            updatePayrollChart();
+            updateEmployeeChart();
+        }
+        
+        function updatePayrollChart() {
+            if (payrollChart) payrollChart.destroy();
+            const canvas = document.getElementById('payrollChart');
+            if (!canvas) return;
+            const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+            const monthlyData = new Array(12).fill(0);
+            allPayroll.forEach(p => {
+                if (p.period) {
+                    const monthIndex = months.findIndex(m => p.period.includes(m));
+                    if (monthIndex !== -1) monthlyData[monthIndex] += p.net_salary || 0;
+                }
+            });
+            payrollChart = new Chart(canvas, {
+                type: 'bar',
+                data: { labels: months, datasets: [{ label: 'Net Payroll', data: monthlyData, backgroundColor: '#b0303b', borderRadius: 8 }] },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+            });
+        }
+        
+        function updateEmployeeChart() {
+            if (employeeChart) employeeChart.destroy();
+            const canvas = document.getElementById('employeeChart');
+            if (!canvas) return;
+            
+            const adminCount = allEmployees.filter(e => e.assignment === 'admin').length;
+            const shsCount = allEmployees.filter(e => e.assignment === 'shs_only').length;
+            const collegeCount = allEmployees.filter(e => e.assignment === 'college_only').length;
+            const bothCount = allEmployees.filter(e => e.assignment === 'both').length;
+            const guardCount = allEmployees.filter(e => e.assignment === 'guard').length;
+            const saCount = allEmployees.filter(e => e.assignment === 'sa').length;
+            
+            const labels = [];
+            const data = [];
+            const colors = ['#b0303b', '#d98989', '#8a1f27', '#f4e8c1', '#a05a2c', '#6b4c3b'];
+            
+            if (adminCount > 0) { labels.push('Admin Staff'); data.push(adminCount); }
+            if (shsCount > 0) { labels.push('SHS Faculty'); data.push(shsCount); }
+            if (collegeCount > 0) { labels.push('College Faculty'); data.push(collegeCount); }
+            if (bothCount > 0) { labels.push('SHS+College'); data.push(bothCount); }
+            if (guardCount > 0) { labels.push('Security'); data.push(guardCount); }
+            if (saCount > 0) { labels.push('Student Asst.'); data.push(saCount); }
+            
+            if (data.length === 0) { labels.push('No Employees'); data.push(1); }
+            
+            employeeChart = new Chart(canvas, {
+                type: 'doughnut',
+                data: { labels, datasets: [{ data, backgroundColor: colors.slice(0, data.length), borderWidth: 0 }] },
+                options: { cutout: '60%', responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { font: { size: 10 } } } } }
+            });
+            
+            const legendDiv = document.getElementById('chartLegend');
+            if (legendDiv && data.length > 0) legendDiv.innerHTML = labels.map((l, i) => `${l}: ${data[i]}`).join(' • ');
+        }
+        
+        function escapeHtml(str) {
+            if (!str) return '';
+            return str.replace(/[&<>]/g, m => m === '&' ? '&amp;' : m === '<' ? '&lt;' : m === '>' ? '&gt;' : m);
+        }
+        
+        window.refreshDashboard = () => loadDashboardData();
+        window.logout = () => { localStorage.clear(); window.location.href = 'index.html'; };
+        
+        document.getElementById('currentDate').textContent = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+        loadDashboardData();
+        
+        console.log("Dashboard loaded - Session-based auth");
+    </script>
+</body>
+</html>

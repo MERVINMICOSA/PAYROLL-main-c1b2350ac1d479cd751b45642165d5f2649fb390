@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Philtech GMA | View User</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Security Scripts -->
+    <script src="js/csrf.js"></script>
+    <script src="js/xss-protection.js"></script>
+    <script src="js/secure-ajax.js"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #dcd3b8; }
+        /* Add to existing style section */
+        .group:hover .group-hover\:block {
+            display: block !important;
+        }
+
+        .user-dropdown {
+            position: absolute;
+            right: 0;
+            margin-top: 0.5rem;
+            width: 12rem;
+            background-color: white;
+            border-radius: 0.5rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            padding: 0.5rem 0;
+            z-index: 50;
+            display: none;
+        }
+
+        .group:hover .user-dropdown {
+            display: block;
+        }
+    </style>
+</head>
+<body class="text-gray-700 antialiased min-h-screen">
+
+    <!-- Top Navigation Bar -->
+    <nav class="bg-[#8a1f27] text-white px-6 py-3 flex justify-between items-center sticky top-0 z-50 shadow-md">
+        <div class="flex items-center gap-2">
+            <div class="w-8 h-8 bg-[#b0303b] rounded-lg flex items-center justify-center">
+                <i class="fa-solid fa-file-invoice text-[#f4e8c1]"></i>
+            </div>
+            <span class="font-bold text-lg">Philtech GMA</span>
+        </div>
+        
+        <div class="hidden md:flex items-center gap-1">
+            <a href="dashboardSadmin.html" class="nav-link px-4 py-2 rounded-lg hover:bg-[#d98989] transition-colors font-medium">Dashboard</a>
+            <a href="employeesSadmin.html" class="nav-link px-4 py-2 rounded-lg hover:bg-[#d98989] transition-colors font-medium">Employees</a>
+            <a href="payrollSadmin.html" class="nav-link px-4 py-2 rounded-lg hover:bg-[#d98989] transition-colors font-medium">Payroll</a>
+            <a href="attendanceSadmin.html" class="nav-link px-4 py-2 rounded-lg hover:bg-[#d98989] transition-colors font-medium">Attendance</a>
+            <a href="user-mgmt.html" class="nav-link px-4 py-2 rounded-lg hover:bg-[#d98989] transition-colors font-medium">Users</a>
+            <a href="settingsSadmin.html" class="nav-link px-4 py-2 rounded-lg hover:bg-[#d98989] transition-colors font-medium">Settings</a>
+        </div>
+        
+        <div class="flex items-center gap-3">
+            <span class="text-sm hidden sm:block" id="userName">Superadmin</span>
+            <div class="relative group">
+                <img src="https://i.pravatar.cc/150?u=superadmin" class="w-8 h-8 rounded-full border-2 border-white cursor-pointer">
+                <div class="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg py-1 hidden group-hover:block z-50">
+                    <a href="#" onclick="logout()" class="block px-4 py-2 text-sm text-red-600 hover:bg-gray-100">Logout</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="p-6 md:p-8 max-w-4xl mx-auto">
+        
+        <!-- Header -->
+        <div class="flex justify-between items-center mb-6">
+            <div>
+                <h1 class="text-2xl font-bold text-[#8a1f27]">User Details</h1>
+                <p class="text-gray-500 text-sm mt-1" id="currentDate"></p>
+            </div>
+            <div class="flex gap-2">
+                <button onclick="editUser()" class="bg-[#b0303b] text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-[#8a1f27] transition-colors shadow-md flex items-center gap-2">
+                    <i class="fa-regular fa-pen-to-square"></i> Edit
+                </button>
+                <button onclick="goBack()" class="bg-white px-4 py-2 rounded-lg text-sm font-medium shadow-sm hover:shadow-md transition-colors flex items-center gap-2">
+                    <i class="fa-solid fa-arrow-left"></i> Back
+                </button>
+            </div>
+        </div>
+
+        <!-- User Profile Card -->
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+            <!-- Profile Header -->
+            <div class="bg-gradient-to-r from-[#b0303b] to-[#8a1f27] px-8 py-6 text-white">
+                <div class="flex items-center gap-6">
+                    <div class="w-20 h-20 bg-white/20 rounded-full flex items-center justify-center text-3xl">
+                        <i class="fa-regular fa-user"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-2xl font-bold" id="fullName">Loading...</h2>
+                        <p class="text-white/90 text-sm mt-1" id="username">-</p>
+                        <div class="flex items-center gap-3 mt-2">
+                            <span class="px-3 py-1 bg-white/20 rounded-full text-xs" id="role">-</span>
+                            <span class="px-3 py-1 bg-white/20 rounded-full text-xs" id="status">-</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Details Grid -->
+            <div class="p-8">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <!-- Account Information -->
+                    <div class="space-y-4">
+                        <h3 class="text-lg font-semibold text-gray-800 flex items-center gap-2">
+                            <i class="fa-solid fa-user-lock text-[#b0303b]"></i> Account Information
+                        </h3>
+                        <div class="bg-gray-50 p-4 rounded-xl space-y-3">
+                            <div class="flex justify-between">
+                                <span class="text-gray-500">User ID:</span>
+                                <span class="font-medium" id="userId">-</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-500">Username:</span>
+                                <span class="font-medium" id="viewUsername">-</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-500">Full Name:</span>
+                                <span class="font-medium" id="viewFullName">-</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-500">Email:</span>
+                                <span class="font-medium" id="email">-</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-500">Phone:</span>
+                                <span class="font-medium" id="phone">-</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Role & Permissions -->
+                    <div class="space-y-4">
+                        <h3 class="text-lg font-semibold text-gray-800 flex items-center gap-2">
+                            <i class="fa-solid fa-shield text-[#b0303b]"></i> Role & Permissions
+                        </h3>
+                        <div class="bg-gray-50 p-4 rounded-xl space-y-3">
+                            <div class="flex justify-between">
+                                <span class="text-gray-500">User Role:</span>
+                                <span class="font-medium" id="viewRole">-</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-500">Status:</span>
+                                <span class="font-medium" id="viewStatus">-</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-500">Permissions:</span>
+                                <span class="font-medium" id="permissions">-</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Employee Link -->
+                    <div class="space-y-4">
+                        <h3 class="text-lg font-semibold text-gray-800 flex items-center gap-2">
+                            <i class="fa-regular fa-user text-[#b0303b]"></i> Linked Employee
+                        </h3>
+                        <div class="bg-gray-50 p-4 rounded-xl space-y-3">
+                            <div class="flex justify-between">
+                                <span class="text-gray-500">Employee ID:</span>
+                                <span class="font-medium" id="employeeId">-</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-500">Employee Name:</span>
+                                <span class="font-medium" id="employeeName">-</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-500">Position:</span>
+                                <span class="font-medium" id="employeePosition">-</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Account Metadata -->
+                    <div class="space-y-4">
+                        <h3 class="text-lg font-semibold text-gray-800 flex items-center gap-2">
+                            <i class="fa-regular fa-clock text-[#b0303b]"></i> Account Metadata
+                        </h3>
+                        <div class="bg-gray-50 p-4 rounded-xl space-y-3">
+                            <div class="flex justify-between">
+                                <span class="text-gray-500">Created At:</span>
+                                <span class="font-medium" id="createdAt">-</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-500">Last Login:</span>
+                                <span class="font-medium" id="lastLogin">-</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-500">Created By:</span>
+                                <span class="font-medium" id="createdBy">-</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Activity Summary -->
+                <div class="mt-8">
+                    <h3 class="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                        <i class="fa-solid fa-chart-simple text-[#b0303b]"></i> Activity Summary
+                    </h3>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div class="bg-[#b0303b]/5 rounded-xl p-4 text-center">
+                            <p class="text-sm text-gray-500">Total Logins</p>
+                            <p class="text-2xl font-bold text-[#b0303b]" id="totalLogins">0</p>
+                        </div>
+                        <div class="bg-[#b0303b]/5 rounded-xl p-4 text-center">
+                            <p class="text-sm text-gray-500">Actions Performed</p>
+                            <p class="text-2xl font-bold text-[#b0303b]" id="totalActions">0</p>
+                        </div>
+                        <div class="bg-[#b0303b]/5 rounded-xl p-4 text-center">
+                            <p class="text-sm text-gray-500">Last Action</p>
+                            <p class="text-2xl font-bold text-[#b0303b]" id="lastAction">-</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="js/database.js"></script>
+    <script src="js/navigation.js"></script>
+    <script>
+        let userId = null;
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            await Database.ensureDatabaseReady();
+            document.getElementById('currentDate').textContent = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+            
+            // Get user ID from URL
+            const urlParams = new URLSearchParams(window.location.search);
+            userId = parseInt(urlParams.get('id'));
+            
+            if (!userId) {
+                alert('User ID not provided');
+                window.location.href = 'user-mgmt.html';
+                return;
+            }
+            
+            await loadUserData();
+        });
+
+        async function loadUserData() {
+            try {
+                const user = await Database.getUserById(userId);
+                
+                if (!user) {
+                    alert('User not found');
+                    window.location.href = 'user-mgmt.html';
+                    return;
+                }
+                
+                // Populate user information
+                document.getElementById('userId').textContent = user.id;
+                document.getElementById('fullName').textContent = user.full_name || user.username;
+                document.getElementById('viewFullName').textContent = user.full_name || user.username;
+                document.getElementById('username').textContent = user.username;
+                document.getElementById('viewUsername').textContent = user.username;
+                document.getElementById('email').textContent = user.email || 'N/A';
+                document.getElementById('phone').textContent = user.phone || 'N/A';
+                
+                // Role and status
+                document.getElementById('role').textContent = user.role;
+                document.getElementById('viewRole').textContent = user.role;
+                
+                const statusSpan = document.getElementById('status');
+                statusSpan.textContent = user.status || 'Active';
+                statusSpan.className = user.status === 'Active' ? 'px-3 py-1 bg-white/20 rounded-full text-xs' : 'px-3 py-1 bg-red-500/20 rounded-full text-xs';
+                
+                document.getElementById('viewStatus').textContent = user.status || 'Active';
+                
+                // Permissions based on role
+                let permissions = 'View Only';
+                if (user.role === 'Superadmin') permissions = 'Full Access';
+                else if (user.role === 'Administrator') permissions = 'Manage Payroll, Employees, Attendance';
+                else if (user.role === 'Payroll Staff') permissions = 'Manage Payroll Only';
+                else if (user.role === 'Teacher') permissions = 'View Own Data Only';
+                document.getElementById('permissions').textContent = permissions;
+                
+                // Employee link
+                document.getElementById('employeeId').textContent = user.employee_id || 'Not Linked';
+                
+                if (user.linked_employee) {
+                    const employees = await Database.getAllEmployees();
+                    const linkedEmp = employees.find(e => e.id === user.linked_employee);
+                    if (linkedEmp) {
+                        document.getElementById('employeeName').textContent = linkedEmp.full_name;
+                        document.getElementById('employeePosition').textContent = linkedEmp.position;
+                    } else {
+                        document.getElementById('employeeName').textContent = 'Not Found';
+                        document.getElementById('employeePosition').textContent = 'N/A';
+                    }
+                } else {
+                    document.getElementById('employeeName').textContent = 'Not Linked';
+                    document.getElementById('employeePosition').textContent = 'N/A';
+                }
+                
+                // Metadata
+                document.getElementById('createdAt').textContent = user.created_at ? new Date(user.created_at).toLocaleString() : 'N/A';
+                document.getElementById('lastLogin').textContent = user.last_login ? new Date(user.last_login).toLocaleString() : 'Never';
+                document.getElementById('createdBy').textContent = user.created_by || 'System';
+                
+                // Activity stats (mock data for now)
+                document.getElementById('totalLogins').textContent = user.login_count || '0';
+                document.getElementById('totalActions').textContent = user.action_count || '0';
+                document.getElementById('lastAction').textContent = user.last_action || 'N/A';
+                
+            } catch (error) {
+                console.error('Error loading user:', error);
+                alert('Error loading user data');
+            }
+        }
+
+        function editUser() {
+            window.location.href = `edit-user.html?id=${userId}`;
+        }
+
+        function goBack() {
+            window.location.href = 'user-mgmt.html';
+        }
+    </script>
+</body>
+</html>

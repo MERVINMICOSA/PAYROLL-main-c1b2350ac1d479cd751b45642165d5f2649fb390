@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Philtech GMA | My Attendance</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Security Scripts -->
+    <script src="js/csrf.js"></script>
+    <script src="js/xss-protection.js"></script>
+    <script src="js/secure-ajax.js"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #dcd3b8; }
+        .nav-link.active { background-color: #b0303b; color: white; }
+        /* Add to existing style section */
+        .group:hover .group-hover\:block {
+            display: block !important;
+        }
+
+        .user-dropdown {
+            position: absolute;
+            right: 0;
+            margin-top: 0.5rem;
+            width: 12rem;
+            background-color: white;
+            border-radius: 0.5rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            padding: 0.5rem 0;
+            z-index: 50;
+            display: none;
+        }
+
+        .group:hover .user-dropdown {
+            display: block;
+        }
+    </style>
+</head>
+<body class="text-gray-700 antialiased min-h-screen">
+
+    <!-- Top Navigation Bar -->
+    <nav class="bg-[#8a1f27] text-white px-6 py-3 flex justify-between items-center sticky top-0 z-50 shadow-md">
+        <div class="flex items-center gap-2">
+            <div class="w-8 h-8 bg-[#b0303b] rounded-lg flex items-center justify-center">
+                <i class="fa-solid fa-chalkboard-user text-[#f4e8c1]"></i>
+            </div>
+            <span class="font-bold text-lg">Philtech GMA - Teacher Portal</span>
+        </div>
+        
+        <div class="hidden md:flex items-center gap-1">
+            <a href="teacher-dashboard.html" class="nav-link px-4 py-2 rounded-lg hover:bg-[#d98989] transition-colors font-medium">Dashboard</a>
+            <a href="teacher-payslips.html" class="nav-link px-4 py-2 rounded-lg hover:bg-[#d98989] transition-colors font-medium">My Payslips</a>
+            <a href="teacher-attendance.html" class="nav-link active px-4 py-2 rounded-lg bg-[#b0303b] text-white font-medium">My Attendance</a>
+            <a href="teacher-profile.html" class="nav-link px-4 py-2 rounded-lg hover:bg-[#d98989] transition-colors font-medium">My Profile</a>
+        </div>
+        
+        <div class="flex items-center gap-3">
+            <span class="text-sm hidden sm:block" id="userName">Teacher</span>
+            <div class="relative group">
+                <img src="https://i.pravatar.cc/150?u=teacher" class="w-8 h-8 rounded-full border-2 border-white cursor-pointer">
+                <div class="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg py-1 hidden group-hover:block z-50">
+                    <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Profile</a>
+                    <a href="#" onclick="logout()" class="block px-4 py-2 text-sm text-red-600 hover:bg-gray-100">Logout</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="p-6 md:p-8 max-w-7xl mx-auto">
+        
+        <!-- Header -->
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+            <div>
+                <h1 class="text-2xl font-bold text-[#8a1f27]">My Attendance</h1>
+                <p class="text-gray-500 text-sm mt-1" id="currentDate"></p>
+            </div>
+            
+            <select class="border border-gray-200 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-[#b0303b] focus:border-transparent bg-white" id="yearSelect">
+                <option value="2025">2025</option>
+                <option value="2024">2024</option>
+                <option value="2023">2023</option>
+            </select>
+        </div>
+
+        <!-- Summary Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                <p class="text-sm text-gray-500 mb-1">Total Days Present</p>
+                <h3 class="text-2xl font-bold text-gray-800" id="totalDays">0</h3>
+            </div>
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                <p class="text-sm text-gray-500 mb-1">Total Hours Worked</p>
+                <h3 class="text-2xl font-bold text-gray-800" id="totalHours">0</h3>
+            </div>
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                <p class="text-sm text-gray-500 mb-1">Overtime Hours</p>
+                <h3 class="text-2xl font-bold text-yellow-600" id="totalOT">0</h3>
+            </div>
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                <p class="text-sm text-gray-500 mb-1">Late Hours</p>
+                <h3 class="text-2xl font-bold text-red-600" id="totalLate">0</h3>
+            </div>
+        </div>
+
+        <!-- Attendance Chart -->
+        <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 mb-8">
+            <h3 class="font-semibold text-gray-800 mb-4">Monthly Attendance Trend</h3>
+            <div class="h-64">
+                <canvas id="attendanceChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Attendance Table -->
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+            <div class="px-6 py-4 border-b border-gray-100">
+                <h3 class="font-semibold text-gray-800">Detailed Records</h3>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left">
+                    <thead class="bg-gray-50 text-xs text-gray-500">
+                        <tr>
+                            <th class="py-3 px-6">Date</th>
+                            <th class="py-3">Hours Worked</th>
+                            <th class="py-3">Overtime</th>
+                            <th class="py-3">Late</th>
+                            <th class="py-3">Pay Type</th>
+                            <th class="py-3">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody class="text-sm" id="attendanceTableBody">
+                        <tr><td colspan="6" class="py-8 text-center text-gray-400">Loading...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Pagination -->
+            <div class="px-6 py-3 border-t border-gray-100 flex justify-between items-center">
+                <span class="text-xs text-gray-400" id="paginationInfo">Showing 0-0 of 0</span>
+                <div class="flex gap-1" id="paginationControls"></div>
+            </div>
+        </div>
+    </main>
+
+    <script src="js/database.js"></script>
+    <script src="js/navigation.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        let teacherId = null;
+        let allAttendance = [];
+        let currentPage = 1;
+        const itemsPerPage = 10;
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            await Database.ensureDatabaseReady();
+            document.getElementById('currentDate').textContent = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+            
+            await loadTeacherData();
+            
+            document.getElementById('yearSelect').addEventListener('change', filterByYear);
+        });
+
+        async function loadTeacherData() {
+            // Get current user
+            const user = JSON.parse(localStorage.getItem('user') || '{}');
+            document.getElementById('userName').textContent = user.full_name || user.username || 'Teacher';
+            
+            // Find employee record linked to this teacher
+            const employees = await Database.getAllEmployees();
+            const teacherEmployee = employees.find(e => e.email === user.email || e.employee_id === user.employee_id) || employees[0];
+            
+            if (teacherEmployee) {
+                teacherId = teacherEmployee.id;
+                await loadAttendance();
+            }
+        }
+
+        async function loadAttendance() {
+            if (!teacherId) return;
+            
+            allAttendance = await Database.getAttendanceByEmployee(teacherId);
+            
+            // Calculate stats
+            let totalHours = 0;
+            let totalOT = 0;
+            let totalLate = 0;
+            
+            allAttendance.forEach(a => {
+                totalHours += (a.hours_worked || a.hours_attended || 0);
+                totalOT += (a.overtime_hours || a.ot_hours || 0);
+                totalLate += (a.late_hours || 0);
+            });
+            
+            document.getElementById('totalDays').textContent = allAttendance.length;
+            document.getElementById('totalHours').textContent = totalHours;
+            document.getElementById('totalOT').textContent = totalOT;
+            document.getElementById('totalLate').textContent = totalLate;
+            
+            renderTable();
+            initChart();
+        }
+
+        function renderTable(records = allAttendance) {
+            const start = (currentPage - 1) * itemsPerPage;
+            const end = start + itemsPerPage;
+            const pageData = records.slice(start, end);
+            const totalPages = Math.ceil(records.length / itemsPerPage);
+            
+            const tbody = document.getElementById('attendanceTableBody');
+            if (pageData.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" class="py-8 text-center text-gray-400">No attendance records found</td></tr>';
+            } else {
+                tbody.innerHTML = pageData.map(a => `
+                    <tr class="border-b hover:bg-gray-50">
+                        <td class="py-3 px-6">${a.attendance_date || a.date || 'N/A'}</td>
+                        <td class="py-3">${a.hours_worked || a.hours_attended || 0} hrs</td>
+                        <td class="py-3">${a.overtime_hours || a.ot_hours || 0} hrs</td>
+                        <td class="py-3">${a.late_hours || 0} hrs</td>
+                        <td class="py-3"><span class="px-2 py-1 bg-[#b0303b]/10 text-[#b0303b] rounded-full text-xs">${a.pay_type || 'Regular'}</span></td>
+                        <td class="py-3"><span class="px-2 py-1 rounded-full text-xs bg-green-100 text-green-600">Present</span></td>
+                    </tr>
+                `).join('');
+            }
+            
+            document.getElementById('paginationInfo').textContent = `Showing ${records.length ? start + 1 : 0}-${Math.min(end, records.length)} of ${records.length}`;
+            renderPagination(totalPages);
+        }
+
+        function renderPagination(totalPages) {
+            let html = '';
+            html += `<button class="w-8 h-8 rounded-lg border ${currentPage === 1 ? 'bg-gray-100 text-gray-400' : 'hover:bg-[#b0303b] hover:text-white'} transition-colors" onclick="changePage(${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''}><i class="fa-solid fa-chevron-left text-xs"></i></button>`;
+            for (let i = 1; i <= totalPages; i++) {
+                if (i === 1 || i === totalPages || (i >= currentPage - 2 && i <= currentPage + 2)) {
+                    html += `<button class="w-8 h-8 rounded-lg ${i === currentPage ? 'bg-[#b0303b] text-white' : 'border hover:bg-[#d98989] hover:text-white'} transition-colors text-xs font-medium" onclick="changePage(${i})">${i}</button>`;
+                } else if (i === currentPage - 3 || i === currentPage + 3) {
+                    html += `<span class="w-8 h-8 flex items-center justify-center">...</span>`;
+                }
+            }
+            html += `<button class="w-8 h-8 rounded-lg border ${currentPage === totalPages ? 'bg-gray-100 text-gray-400' : 'hover:bg-[#b0303b] hover:text-white'} transition-colors" onclick="changePage(${currentPage + 1})" ${currentPage === totalPages ? 'disabled' : ''}><i class="fa-solid fa-chevron-right text-xs"></i></button>`;
+            document.getElementById('paginationControls').innerHTML = html;
+        }
+
+        function changePage(page) {
+            const totalPages = Math.ceil(allAttendance.length / itemsPerPage);
+            if (page < 1 || page > totalPages) return;
+            currentPage = page;
+            renderTable();
+        }
+
+        function filterByYear() {
+            const year = document.getElementById('yearSelect').value;
+            // Implement year filtering if needed
+            renderTable();
+        }
+
+        function initChart() {
+            const ctx = document.getElementById('attendanceChart').getContext('2d');
+            
+            // Group attendance by month
+            const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+            const monthlyHours = new Array(12).fill(0);
+            
+            allAttendance.forEach(a => {
+                const date = a.attendance_date || a.date;
+                if (date) {
+                    const month = new Date(date).getMonth();
+                    monthlyHours[month] += (a.hours_worked || a.hours_attended || 0);
+                }
+            });
+
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: months,
+                    datasets: [{
+                        label: 'Hours Worked',
+                        data: monthlyHours,
+                        backgroundColor: '#b0303b',
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } }
+                }
+            });
+        }
+    </script>
+</body>
+</html>

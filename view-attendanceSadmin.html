@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>View Attendance - Philtech GMA</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <link rel="stylesheet" href="css/global.css">
+    <link rel="stylesheet" href="css/view-attendance.css">
+    <!-- Security Scripts -->
+    <script src="js/csrf.js"></script>
+    <script src="js/xss-protection.js"></script>
+    <script src="js/secure-ajax.js"></script>
+</head>
+<body>
+
+<header class="top-bar">
+    <div class="logo-section">
+        <img src="assets/images/logo.png" class="logo" alt="Logo">
+        <h1>Philtech GMA</h1>
+    </div>
+
+    <button class="back-btn" onclick="go('attendanceSadmin.html')">←</button>
+</header>
+
+<main class="view-wrapper">
+
+    <div class="view-card">
+
+        <div class="avatar-circle">📋</div>
+
+        <h2>Attendance Details</h2>
+
+        <div class="detail-grid" id="attendanceDetails">
+            <!-- Attendance details will be loaded here -->
+            <div class="loading">Loading...</div>
+        </div>
+
+        <div class="calendar-section" id="calendarSection">
+            <div class="calendar-header">
+                <h3>Daily Attendance Calendar</h3>
+                <div class="calendar-nav">
+                    <button onclick="changeMonth(-1)">◀</button>
+                    <span id="currentMonth" style="font-weight: bold; color: #b0303b; font-size: 18px; padding: 8px 15px;">June 2025</span>
+                    <button onclick="changeMonth(1)">▶</button>
+                </div>
+            </div>
+            <div class="calendar-grid" id="calendarGrid">
+                <!-- Calendar will be generated here -->
+            </div>
+            <div class="time-details" id="timeDetails">
+                <h4 id="selectedDate">June 1, 2025</h4>
+                <div class="time-info">
+                    <div class="time-box">
+                        <div class="label">Hours Worked</div>
+                        <div class="time" id="hoursWorked">--</div>
+                    </div>
+                    <div class="time-box">
+                        <div class="label">Overtime</div>
+                        <div class="time" id="overtime">--</div>
+                    </div>
+                    <div class="time-box">
+                        <div class="label">Pay Type</div>
+                        <div class="time" id="payType">--</div>
+                    </div>
+                    <div class="time-box" id="adminPayRateBox" style="display: none;">
+                        <div class="label">Admin Pay Rate</div>
+                        <div class="time" id="adminPayRate">--</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="form-buttons">
+            <button type="button" class="edit-btn" id="editBtn">✏️ Edit</button>
+            <button type="button" class="cancel-btn" onclick="go('attendanceSadmin.html')">Back</button>
+        </div>
+
+    </div>
+
+</main>
+<script src="js/database.js"></script>
+<script src="js/navigation.js"></script>
+<script src="js/view-attendanceSadmin.js"></script>
+</body>
+</html>
+

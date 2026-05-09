@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Philtech GMA | Superadmin Employees</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Security Scripts -->
+    <script src="js/csrf.js"></script>
+    <script src="js/xss-protection.js"></script>
+    <script src="js/secure-ajax.js"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #dcd3b8; }
+        .nav-link.active { background-color: #b0303b; color: white; }
+        .employee-row:hover { background-color: rgba(217, 137, 137, 0.1); }
+        
+        .archive-toggle {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            background: white;
+            border-radius: 50px;
+            border: 1px solid #e5e7eb;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .archive-toggle.active {
+            background: #b0303b;
+            color: white;
+            border-color: #b0303b;
+        }
+        .archive-toggle.active i { color: white; }
+        
+        .status-active {
+            background-color: #d4edda;
+            color: #155724;
+            padding: 4px 12px;
+            border-radius: 50px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+        .status-archived {
+            background-color: #e2e3e5;
+            color: #6c757d;
+            padding: 4px 12px;
+            border-radius: 50px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+        
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        .modal-content {
+            background: white;
+            border-radius: 16px;
+            padding: 24px;
+            max-width: 500px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body class="text-gray-700 antialiased min-h-screen">
+
+    <nav class="bg-[#8a1f27] text-white px-6 py-3 flex justify-between items-center sticky top-0 z-50 shadow-md">
+        <div class="flex items-center gap-2">
+            <div class="w-8 h-8 bg-[#b0303b] rounded-lg flex items-center justify-center">
+                <i class="fa-solid fa-crown text-[#f4e8c1]"></i>
+            </div>
+            <span class="font-bold text-lg">Philtech GMA - Superadmin</span>
+        </div>
+        
+        <div class="hidden md:flex items-center gap-1">
+            <a href="dashboardSadmin.html" class="nav-link px-4 py-2 rounded-lg hover:bg-[#d98989] transition-colors font-medium">Dashboard</a>
+            <a href="employeesSadmin.html" class="nav-link active px-4 py-2 rounded-lg bg-[#b0303b] text-white font-medium">Employees</a>
+            <a href="payrollSadmin.html" class="nav-link px-4 py-2 rounded-lg hover:bg-[#d98989] transition-colors font-medium">Payroll</a>
+            <a href="user-mgmt.html" class="nav-link px-4 py-2 rounded-lg hover:bg-[#d98989] transition-colors font-medium">Users</a>
+            <a href="settingsSadmin.html" class="nav-link px-4 py-2 rounded-lg hover:bg-[#d98989] transition-colors font-medium">Settings</a>
+        </div>
+        
+        <div class="flex items-center gap-3">
+            <span class="text-sm hidden sm:block" id="userName">Superadmin</span>
+            <div class="relative group">
+                <img src="https://i.pravatar.cc/150?u=superadmin" class="w-8 h-8 rounded-full border-2 border-white cursor-pointer">
+                <div class="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg py-1 hidden group-hover:block z-50">
+                    <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Profile</a>
+                    <a href="#" onclick="logout()" class="block px-4 py-2 text-sm text-red-600 hover:bg-gray-100">Logout</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="p-6 md:p-8 max-w-7xl mx-auto">
+        
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+            <div>
+                <h1 class="text-2xl font-bold text-[#8a1f27]">Employees Management</h1>
+                <p class="text-gray-500 text-sm mt-1" id="currentDate"></p>
+            </div>
+            
+            <div class="flex items-center gap-3 w-full md:w-auto">
+                <div class="archive-toggle" id="archiveToggle" onclick="toggleArchiveView()">
+                    <i class="fa-regular fa-folder-open"></i>
+                    <span>Show Active</span>
+                </div>
+                
+                <div class="relative flex-1 md:w-64">
+                    <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                    <input type="text" id="searchInput" placeholder="Search employees..." 
+                        class="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#b0303b] focus:border-transparent">
+                </div>
+            </div>
+        </div>
+
+        <div class="flex gap-3 mb-6">
+            <select id="typeFilter" class="border border-gray-200 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-[#b0303b]">
+                <option value="all">All Types</option>
+                <option value="shs_only">SHS Only</option>
+                <option value="college_only">College Only</option>
+                <option value="both">Both SHS & College</option>
+                <option value="admin">Admin Staff</option>
+                <option value="guard">Security Guard</option>
+                <option value="sa">Student Assistant</option>
+            </select>
+            
+            <select id="statusFilter" class="border border-gray-200 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-[#b0303b]">
+                <option value="all">All Status</option>
+                <option value="Active">Active</option>
+                <option value="Archived">Archived</option>
+            </select>
+            
+            <button onclick="clearFilters()" class="text-sm text-gray-500 hover:text-gray-700">
+                <i class="fa-regular fa-times-circle mr-1"></i> Clear Filters
+            </button>
+        </div>
+
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="w-full text-left">
+                    <thead class="bg-gray-50 text-xs text-gray-500">
+                        发展
+                            <th class="py-3 px-6">ID</th>
+                            <th class="py-3">Name</th>
+                            <th class="py-3">Position</th>
+                            <th class="py-3">Type</th>
+                            <th class="py-3">Rate</th>
+                            <th class="py-3">Assignment</th>
+                            <th class="py-3">Status</th>
+                            <th class="py-3 text-right pr-6">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody class="text-sm" id="employeeTableBody">
+                        <tr><td colspan="8" class="py-8 text-center text-gray-400">Loading...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            
+            <div class="px-6 py-3 border-t border-gray-100 flex justify-between items-center">
+                <span class="text-xs text-gray-400" id="paginationInfo">Showing 0-0 of 0</span>
+                <div class="flex gap-1" id="paginationControls"></div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Archive Modal -->
+    <div id="archiveModal" class="fixed inset-0 bg-black/50 flex items-center justify-center hidden z-50">
+        <div class="bg-white rounded-2xl max-w-md w-full mx-4">
+            <div class="p-6 border-b border-gray-100">
+                <h3 class="text-xl font-bold text-[#8a1f27]">Archive Employee</h3>
+            </div>
+            <div class="p-6">
+                <p class="text-gray-600 mb-4">Are you sure you want to archive <span id="archiveEmployeeName" class="font-bold"></span>?</p>
+                <p class="text-sm text-gray-500 mb-6">Archived employees can be restored later from the archive view.</p>
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Reason for archiving (optional)</label>
+                    <textarea id="archiveReason" rows="2" 
+                        class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#b0303b]"
+                        placeholder="e.g., Resigned, Transferred, etc."></textarea>
+                </div>
+                <div class="flex gap-3">
+                    <button onclick="confirmArchive()" class="flex-1 bg-[#b0303b] text-white py-2 rounded-lg hover:bg-[#8a1f27]">Archive Employee</button>
+                    <button onclick="closeArchiveModal()" class="flex-1 bg-gray-200 py-2 rounded-lg hover:bg-gray-300">Cancel</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Restore Modal -->
+    <div id="restoreModal" class="fixed inset-0 bg-black/50 flex items-center justify-center hidden z-50">
+        <div class="bg-white rounded-2xl max-w-md w-full mx-4">
+            <div class="p-6 border-b border-gray-100">
+                <h3 class="text-xl font-bold text-[#8a1f27]">Restore Employee</h3>
+            </div>
+            <div class="p-6">
+                <p class="text-gray-600 mb-6">Restore <span id="restoreEmployeeName" class="font-bold"></span> to active status?</p>
+                <div class="flex gap-3">
+                    <button onclick="confirmRestore()" class="flex-1 bg-green-600 text-white py-2 rounded-lg hover:bg-green-700">Restore</button>
+                    <button onclick="closeRestoreModal()" class="flex-1 bg-gray-200 py-2 rounded-lg hover:bg-gray-300">Cancel</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Permanent Delete Modal -->
+    <div id="deleteModal" class="fixed inset-0 bg-black/50 flex items-center justify-center hidden z-50">
+        <div class="bg-white rounded-2xl max-w-md w-full mx-4">
+            <div class="p-6 border-b border-gray-100">
+                <h3 class="text-xl font-bold text-red-600">⚠️ Permanent Delete</h3>
+            </div>
+            <div class="p-6">
+                <p class="text-gray-600 mb-4">Are you sure you want to <span class="font-bold text-red-600">permanently delete</span> <span id="deleteEmployeeName" class="font-bold"></span>?</p>
+                <p class="text-sm text-red-500 mb-6">This action cannot be undone. All associated data will be lost.</p>
+                <div class="flex gap-3">
+                    <button onclick="confirmPermanentDelete()" class="flex-1 bg-red-600 text-white py-2 rounded-lg hover:bg-red-700">Permanently Delete</button>
+                    <button onclick="closeDeleteModal()" class="flex-1 bg-gray-200 py-2 rounded-lg hover:bg-gray-300">Cancel</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+<script src="js/api-integration.js"></script>
+    <script src="js/database.js"></script>
+    <script src="js/navigation.js"></script>
+    <script src="js/teacher-assignment.js"></script>
+    <script>
+        let allEmployees = [];
+        let filteredEmployees = [];
+        let currentPage = 1;
+        let itemsPerPage = 8;
+        let showArchived = false;
+        let currentArchiveId = null;
+        let currentRestoreId = null;
+        let currentDeleteId = null;
+
+        // Direct API calls (like accountant pages)
+        async function loadEmployeesFromAPI() {
+            try {
+                const response = await fetch('/api/employees.php', { credentials: 'include' });
+                if (!response.ok) return [];
+                return await response.json();
+            } catch (error) {
+                console.error("Error loading employees:", error);
+                return [];
+            }
+        }
+
+        async function updateEmployeeAPI(id, data) {
+            try {
+                const response = await fetch('/api/employees.php', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ id, ...data })
+                });
+                return response.ok;
+            } catch (error) {
+                console.error("Error updating employee:", error);
+                return false;
+            }
+        }
+
+        async function deleteEmployeeAPI(id) {
+            try {
+                const response = await fetch(`/api/employees.php?id=${id}`, {
+                    method: 'DELETE',
+                    credentials: 'include'
+                });
+                return response.ok;
+            } catch (error) {
+                console.error("Error deleting employee:", error);
+                return false;
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('currentDate').textContent = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+            
+            loadEmployees();
+            
+            document.getElementById('searchInput').addEventListener('input', filterEmployees);
+            document.getElementById('typeFilter').addEventListener('change', filterEmployees);
+            document.getElementById('statusFilter').addEventListener('change', filterEmployees);
+        });
+
+        async function loadEmployees() {
+            try {
+                allEmployees = await loadEmployeesFromAPI();
+                filterEmployees();
+            } catch (error) {
+                console.error('Error loading employees:', error);
+            }
+        }
+
+        function filterEmployees() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            const typeFilter = document.getElementById('typeFilter').value;
+            const statusFilter = document.getElementById('statusFilter').value;
+            
+            filteredEmployees = allEmployees.filter(emp => {
+                if (statusFilter !== 'all' && emp.status !== statusFilter) return false;
+                if (!showArchived && emp.status === 'Archived') return false;
+                if (showArchived && emp.status !== 'Archived') return false;
+                
+                const matchesSearch = emp.full_name?.toLowerCase().includes(searchTerm) ||
+                                     emp.position?.toLowerCase().includes(searchTerm) ||
+                                     emp.employee_id?.toLowerCase().includes(searchTerm);
+                
+                let matchesType = true;
+                if (typeFilter !== 'all') {
+                    const assignment = emp.assignment || 'regular';
+                    matchesType = assignment === typeFilter;
+                }
+                
+                return matchesSearch && matchesType;
+            });
+            
+            currentPage = 1;
+            renderTable();
+        }
+
+        function renderTable() {
+            const start = (currentPage - 1) * itemsPerPage;
+            const end = start + itemsPerPage;
+            const pageData = filteredEmployees.slice(start, end);
+            const totalPages = Math.ceil(filteredEmployees.length / itemsPerPage);
+            
+            const tbody = document.getElementById('employeeTableBody');
+            
+            if (pageData.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" class="py-8 text-center text-gray-400">No employees found</td></tr>';
+            } else {
+                tbody.innerHTML = pageData.map(emp => {
+                    let assignmentBadge = '';
+                    let rateDisplay = '';
+                    
+                    switch(emp.assignment) {
+                        case 'shs_only':
+                            assignmentBadge = '<span class="bg-blue-100 text-blue-600 text-xs px-2 py-1 rounded-full">SHS</span>';
+                            rateDisplay = `₱${emp.rate_shs || 80}/hr`;
+                            break;
+                        case 'college_only':
+                            assignmentBadge = '<span class="bg-purple-100 text-purple-600 text-xs px-2 py-1 rounded-full">College</span>';
+                            rateDisplay = `₱${emp.rate_college || 85}/hr`;
+                            break;
+                        case 'both':
+                            assignmentBadge = '<span class="bg-indigo-100 text-indigo-600 text-xs px-2 py-1 rounded-full">SHS+CLG</span>';
+                            rateDisplay = `SHS: ₱${emp.rate_shs || 80} / CLG: ₱${emp.rate_college || 85}`;
+                            break;
+                        case 'admin':
+                            assignmentBadge = '<span class="bg-green-100 text-green-600 text-xs px-2 py-1 rounded-full">Admin</span>';
+                            rateDisplay = `₱${emp.rate_admin || 70}/hr`;
+                            break;
+                        case 'guard':
+                            assignmentBadge = '<span class="bg-yellow-100 text-yellow-600 text-xs px-2 py-1 rounded-full">Guard</span>';
+                            rateDisplay = `₱${emp.rate_guard || 433}/day`;
+                            break;
+                        case 'sa':
+                            assignmentBadge = '<span class="bg-orange-100 text-orange-600 text-xs px-2 py-1 rounded-full">SA</span>';
+                            rateDisplay = `₱${emp.rate_sa || 100}/hr`;
+                            break;
+                        default:
+                            assignmentBadge = '<span class="bg-gray-100 text-gray-600 text-xs px-2 py-1 rounded-full">Regular</span>';
+                            rateDisplay = `₱${emp.base_salary || 0}`;
+                    }
+                    
+                    let actions = '';
+                    if (emp.status === 'Active') {
+                        actions = `
+                            <button onclick="editEmployee(${emp.id})" class="text-[#b0303b] hover:text-[#8a1f27] mr-2" title="Edit"><i class="fa-regular fa-pen-to-square"></i></button>
+                            <button onclick="viewEmployee(${emp.id})" class="text-[#b0303b] hover:text-[#8a1f27] mr-2" title="View"><i class="fa-regular fa-eye"></i></button>
+                            <button onclick="openArchiveModal(${emp.id}, '${emp.full_name}')" class="text-gray-400 hover:text-red-600" title="Archive"><i class="fa-regular fa-box-archive"></i></button>
+                        `;
+                    } else {
+                        actions = `
+                            <button onclick="openRestoreModal(${emp.id}, '${emp.full_name}')" class="text-green-600 hover:text-green-800 mr-2" title="Restore"><i class="fa-regular fa-arrow-rotate-left"></i></button>
+                            <button onclick="openDeleteModal(${emp.id}, '${emp.full_name}')" class="text-red-600 hover:text-red-800" title="Permanently Delete"><i class="fa-regular fa-trash-can"></i></button>
+                        `;
+                    }
+                    
+                    return `
+                        <tr class="border-b hover:bg-gray-50 ${emp.status === 'Archived' ? 'opacity-60' : ''}">
+                            <td class="py-3 px-6 font-mono text-xs">#${emp.id}</td>
+                            <td class="py-3 font-medium">${emp.full_name}</td>
+                            <td class="py-3">${emp.position || emp.adminPosition || '—'}</td>
+                            <td class="py-3">${assignmentBadge}</td>
+                            <td class="py-3 text-sm">${rateDisplay}</td>
+                            <td class="py-3"><span class="px-2 py-1 rounded-full text-xs ${emp.assignment === 'both' ? 'bg-purple-100 text-purple-600' : 'bg-gray-100 text-gray-600'}">${emp.assignment || 'Regular'}</span></td>
+                            <td class="py-3"><span class="px-2 py-1 rounded-full text-xs ${emp.status === 'Active' ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-600'}">${emp.status || 'Active'}</span></td>
+                            <td class="py-3 pr-6 text-right">${actions}</td>
+                        </tr>
+                    `;
+                }).join('');
+            }
+            
+            document.getElementById('paginationInfo').textContent = `Showing ${filteredEmployees.length ? start + 1 : 0}-${Math.min(end, filteredEmployees.length)} of ${filteredEmployees.length}`;
+            renderPagination(totalPages);
+        }
+
+        function renderPagination(totalPages) {
+            let html = '';
+            html += `<button class="w-8 h-8 rounded-lg border ${currentPage === 1 ? 'bg-gray-100 text-gray-400' : 'hover:bg-[#b0303b] hover:text-white'}" onclick="changePage(${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''}><i class="fa-solid fa-chevron-left text-xs"></i></button>`;
+            
+            for (let i = 1; i <= totalPages; i++) {
+                if (i === 1 || i === totalPages || (i >= currentPage - 2 && i <= currentPage + 2)) {
+                    html += `<button class="w-8 h-8 rounded-lg ${i === currentPage ? 'bg-[#b0303b] text-white' : 'border hover:bg-[#d98989] hover:text-white'}" onclick="changePage(${i})">${i}</button>`;
+                } else if (i === currentPage - 3 || i === currentPage + 3) {
+                    html += `<span class="w-8 h-8 flex items-center justify-center">...</span>`;
+                }
+            }
+            
+            html += `<button class="w-8 h-8 rounded-lg border ${currentPage === totalPages ? 'bg-gray-100 text-gray-400' : 'hover:bg-[#b0303b] hover:text-white'}" onclick="changePage(${currentPage + 1})" ${currentPage === totalPages ? 'disabled' : ''}><i class="fa-solid fa-chevron-right text-xs"></i></button>`;
+            document.getElementById('paginationControls').innerHTML = html;
+        }
+
+        function changePage(page) {
+            const totalPages = Math.ceil(filteredEmployees.length / itemsPerPage);
+            if (page < 1 || page > totalPages) return;
+            currentPage = page;
+            renderTable();
+        }
+
+        function toggleArchiveView() {
+            showArchived = !showArchived;
+            const toggle = document.getElementById('archiveToggle');
+            const toggleText = toggle.querySelector('span');
+            
+            if (showArchived) {
+                toggle.classList.add('active');
+                toggleText.textContent = 'Show Archived';
+                document.getElementById('statusFilter').value = 'Archived';
+            } else {
+                toggle.classList.remove('active');
+                toggleText.textContent = 'Show Active';
+                document.getElementById('statusFilter').value = 'all';
+            }
+            filterEmployees();
+        }
+
+        function openArchiveModal(id, name) {
+            currentArchiveId = id;
+            document.getElementById('archiveEmployeeName').textContent = name;
+            document.getElementById('archiveModal').classList.remove('hidden');
+        }
+
+        function closeArchiveModal() {
+            document.getElementById('archiveModal').classList.add('hidden');
+            document.getElementById('archiveReason').value = '';
+            currentArchiveId = null;
+        }
+
+async function confirmArchive() {
+            if (!currentArchiveId) return;
+            try {
+                const success = await updateEmployeeAPI(currentArchiveId, {
+                    status: 'Archived',
+                    archived_at: new Date().toISOString(),
+                    archived_reason: document.getElementById('archiveReason').value
+                });
+                if (success) {
+                    alert('Employee archived successfully');
+                    closeArchiveModal();
+                    await loadEmployees();
+                } else {
+                    throw new Error('Failed to archive');
+                }
+            } catch (error) {
+                console.error('Error archiving employee:', error);
+                alert('Error archiving employee');
+            }
+        }
+
+        function openRestoreModal(id, name) {
+            currentRestoreId = id;
+            document.getElementById('restoreEmployeeName').textContent = name;
+            document.getElementById('restoreModal').classList.remove('hidden');
+        }
+
+        function closeRestoreModal() {
+            document.getElementById('restoreModal').classList.add('hidden');
+            currentRestoreId = null;
+        }
+
+        async function confirmRestore() {
+            if (!currentRestoreId) return;
+            try {
+                const success = await updateEmployeeAPI(currentRestoreId, {
+                    status: 'Active',
+                    archived_at: null,
+                    archived_reason: null
+                });
+                if (success) {
+                    alert('Employee restored successfully');
+                    closeRestoreModal();
+                    await loadEmployees();
+                } else {
+                    throw new Error('Failed to restore');
+                }
+            } catch (error) {
+                console.error('Error restoring employee:', error);
+                alert('Error restoring employee');
+            }
+        }
+
+        function openDeleteModal(id, name) {
+            currentDeleteId = id;
+            document.getElementById('deleteEmployeeName').textContent = name;
+            document.getElementById('deleteModal').classList.remove('hidden');
+        }
+
+        function closeDeleteModal() {
+            document.getElementById('deleteModal').classList.add('hidden');
+            currentDeleteId = null;
+        }
+
+        async function confirmPermanentDelete() {
+            if (!currentDeleteId) return;
+            try {
+                const success = await deleteEmployeeAPI(currentDeleteId);
+                if (success) {
+                    alert('Employee permanently deleted');
+                    closeDeleteModal();
+                    await loadEmployees();
+                } else {
+                    throw new Error('Failed to delete');
+                }
+            } catch (error) {
+                console.error('Error deleting employee:', error);
+                alert('Error deleting employee');
+            }
+        }
+
+        function clearFilters() {
+            document.getElementById('searchInput').value = '';
+            document.getElementById('typeFilter').value = 'all';
+            document.getElementById('statusFilter').value = 'all';
+            filterEmployees();
+        }
+
+        function editEmployee(id) { window.location.href = `edit-employeeSadmin.html?id=${id}`; }
+        function viewEmployee(id) { window.location.href = `view-employeeSadmin.html?id=${id}`; }
+        function logout() { localStorage.clear(); window.location.href = 'index.html'; }
+    </script>
+</body>
+</html>

@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Philtech GMA | Edit Payroll</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Security Scripts -->
+    <script src="js/csrf.js"></script>
+    <script src="js/xss-protection.js"></script>
+    <script src="js/secure-ajax.js"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #dcd3b8; }
+        /* Add to existing style section */
+        .group:hover .group-hover\:block {
+            display: block !important;
+        }
+
+        .user-dropdown {
+            position: absolute;
+            right: 0;
+            margin-top: 0.5rem;
+            width: 12rem;
+            background-color: white;
+            border-radius: 0.5rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            padding: 0.5rem 0;
+            z-index: 50;
+            display: none;
+        }
+
+        .group:hover .user-dropdown {
+            display: block;
+        }
+    </style>
+</head>
+<body class="text-gray-700 antialiased min-h-screen">
+
+    <!-- Top Navigation Bar -->
+    <nav class="bg-[#8a1f27] text-white px-6 py-3 flex justify-between items-center sticky top-0 z-50 shadow-md">
+        <div class="flex items-center gap-2">
+            <div class="w-8 h-8 bg-[#b0303b] rounded-lg flex items-center justify-center">
+                <i class="fa-solid fa-file-invoice text-[#f4e8c1]"></i>
+            </div>
+            <span class="font-bold text-lg">Philtech GMA</span>
+        </div>
+        
+        <div class="hidden md:flex items-center gap-1">
+            <a href="dashboard.html" class="nav-link px-4 py-2 rounded-lg hover:bg-[#d98989] transition-colors font-medium">Dashboard</a>
+            <a href="employees.html" class="nav-link px-4 py-2 rounded-lg hover:bg-[#d98989] transition-colors font-medium">Employees</a>
+            <a href="payroll.html" class="nav-link px-4 py-2 rounded-lg hover:bg-[#d98989] transition-colors font-medium">Payroll</a>
+            <a href="attendance.html" class="nav-link px-4 py-2 rounded-lg hover:bg-[#d98989] transition-colors font-medium">Attendance</a>
+            <a href="settings.html" class="nav-link px-4 py-2 rounded-lg hover:bg-[#d98989] transition-colors font-medium">Settings</a>
+        </div>
+        
+        <div class="flex items-center gap-3">
+            <span class="text-sm hidden sm:block" id="userName">Accountant</span>
+            <div class="relative group">
+                <img src="https://i.pravatar.cc/150?u=accountant" class="w-8 h-8 rounded-full border-2 border-white cursor-pointer">
+                <div class="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg py-1 hidden group-hover:block z-50">
+                    <a href="#" onclick="logout()" class="block px-4 py-2 text-sm text-red-600 hover:bg-gray-100">Logout</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="p-6 md:p-8 max-w-4xl mx-auto">
+        
+        <!-- Header -->
+        <div class="flex justify-between items-center mb-6">
+            <div>
+                <h1 class="text-2xl font-bold text-[#8a1f27]">Edit Payroll</h1>
+                <p class="text-gray-500 text-sm mt-1" id="currentDate"></p>
+            </div>
+            <button onclick="goBack()" class="bg-white px-4 py-2 rounded-lg text-sm font-medium shadow-sm hover:shadow-md transition-shadow flex items-center gap-2">
+                <i class="fa-solid fa-arrow-left"></i> Back
+            </button>
+        </div>
+
+        <!-- Form Card -->
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-8">
+            <form id="payrollForm" class="space-y-6">
+                <input type="hidden" id="payrollId">
+                
+                <!-- Employee Information (Read-only) -->
+                <div>
+                    <h2 class="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                        <i class="fa-regular fa-user text-[#b0303b]"></i> Employee Information
+                    </h2>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Employee Name</label>
+                            <input type="text" id="employeeName" readonly 
+                                class="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Payroll Period</label>
+                            <input type="text" id="payrollPeriod" readonly 
+                                class="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Salary Components -->
+                <div class="pt-4 border-t border-gray-100">
+                    <h2 class="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                        <i class="fa-solid fa-money-bill-wave text-[#b0303b]"></i> Salary Components
+                    </h2>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Basic Salary</label>
+                            <input type="number" id="basicSalary" step="0.01" min="0" readonly
+                                class="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Gross Salary <span class="text-red-500">*</span></label>
+                            <div class="relative">
+                                <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">₱</span>
+                                <input type="number" id="grossSalary" step="0.01" min="0" required
+                                    class="w-full pl-8 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#b0303b] focus:border-transparent">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Deductions -->
+                <div class="pt-4 border-t border-gray-100">
+                    <h2 class="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                        <i class="fa-solid fa-arrow-down text-[#b0303b]"></i> Deductions
+                    </h2>
+                    
+                    <!-- Mandatory Deductions -->
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">SSS</label>
+                            <div class="relative">
+                                <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">₱</span>
+                                <input type="number" id="sss" step="0.01" min="0"
+                                    class="w-full pl-8 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#b0303b] focus:border-transparent">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">PhilHealth</label>
+                            <div class="relative">
+                                <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">₱</span>
+                                <input type="number" id="philhealth" step="0.01" min="0"
+                                    class="w-full pl-8 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#b0303b] focus:border-transparent">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Pag-IBIG</label>
+                            <div class="relative">
+                                <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">₱</span>
+                                <input type="number" id="pagibig" step="0.01" min="0"
+                                    class="w-full pl-8 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#b0303b] focus:border-transparent">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Additional Deductions -->
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Additional Deductions</label>
+                        <div id="additionalDeductions" class="space-y-2"></div>
+                        <button type="button" onclick="addDeductionRow()" 
+                            class="mt-2 px-3 py-1 bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200 transition-colors text-sm flex items-center gap-1">
+                            <i class="fa-solid fa-plus"></i> Add Deduction
+                        </button>
+                    </div>
+
+                    <!-- Total Deduction -->
+                    <div class="bg-gray-50 p-4 rounded-lg">
+                        <div class="flex justify-between items-center">
+                            <span class="font-medium text-gray-700">Total Deductions</span>
+                            <span class="text-xl font-bold text-[#b0303b]" id="totalDeductionDisplay">₱0.00</span>
+                        </div>
+                        <input type="hidden" id="totalDeduction">
+                    </div>
+                </div>
+
+                <!-- Net Salary -->
+                <div class="pt-4 border-t border-gray-100">
+                    <div class="bg-[#b0303b]/5 p-4 rounded-lg">
+                        <div class="flex justify-between items-center">
+                            <span class="font-medium text-gray-700">Net Salary</span>
+                            <span class="text-2xl font-bold text-[#b0303b]" id="netSalaryDisplay">₱0.00</span>
+                        </div>
+                        <input type="hidden" id="netSalary">
+                    </div>
+                </div>
+
+                <!-- Status -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Status</label>
+                        <select id="status" class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#b0303b] focus:border-transparent">
+                            <option value="Draft">Draft</option>
+                            <option value="Pending">Pending</option>
+                            <option value="Paid">Paid</option>
+                            <option value="Cancelled">Cancelled</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Form Actions -->
+                <div class="flex justify-end gap-3 pt-4 border-t border-gray-100">
+                    <button type="button" onclick="goBack()" class="px-6 py-2 border border-gray-200 rounded-lg font-medium hover:bg-gray-50 transition-colors">
+                        Cancel
+                    </button>
+                    <button type="submit" class="px-6 py-2 bg-[#b0303b] text-white rounded-lg font-medium hover:bg-[#8a1f27] transition-colors shadow-md">
+                        Update Payroll
+                    </button>
+                </div>
+            </form>
+        </div>
+    </main>
+
+    <script src="js/database.js"></script>
+    <script src="js/navigation.js"></script>
+    <script>
+        let payrollId = null;
+        let deductionCount = 0;
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            await Database.ensureDatabaseReady();
+            document.getElementById('currentDate').textContent = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+            
+            // Get payroll ID from URL
+            const urlParams = new URLSearchParams(window.location.search);
+            payrollId = parseInt(urlParams.get('id'));
+            
+            if (!payrollId) {
+                alert('Payroll ID not provided');
+                window.location.href = 'payroll.html';
+                return;
+            }
+            
+            await loadPayrollData();
+            
+            // Add event listeners for auto-calculation
+            document.getElementById('grossSalary').addEventListener('input', calculateTotals);
+            document.getElementById('sss').addEventListener('input', calculateTotals);
+            document.getElementById('philhealth').addEventListener('input', calculateTotals);
+            document.getElementById('pagibig').addEventListener('input', calculateTotals);
+        });
+
+        async function loadPayrollData() {
+            try {
+                const payroll = await Database.getPayrollById(payrollId);
+                
+                if (!payroll) {
+                    alert('Payroll record not found');
+                    window.location.href = 'payroll.html';
+                    return;
+                }
+                
+                // Get employee info
+                const employee = await Database.getEmployeeById(payroll.employee_id);
+                
+                // Populate form fields
+                document.getElementById('payrollId').value = payroll.id;
+                document.getElementById('employeeName').value = employee ? employee.full_name : 'Unknown';
+                document.getElementById('payrollPeriod').value = payroll.period || '';
+                document.getElementById('basicSalary').value = employee ? employee.base_salary || 0 : 0;
+                document.getElementById('grossSalary').value = payroll.gross_salary || 0;
+                document.getElementById('sss').value = payroll.sss || 0;
+                document.getElementById('philhealth').value = payroll.philhealth || 0;
+                document.getElementById('pagibig').value = payroll.pagibig || 0;
+                document.getElementById('status').value = payroll.status || 'Draft';
+                
+                // Load additional deductions
+                if (payroll.additional_deductions && payroll.additional_deductions.length > 0) {
+                    payroll.additional_deductions.forEach(ded => {
+                        addDeductionRow(ded.name, ded.amount);
+                    });
+                }
+                
+                calculateTotals();
+                
+            } catch (error) {
+                console.error('Error loading payroll:', error);
+                alert('Error loading payroll data');
+            }
+        }
+
+        function addDeductionRow(name = '', amount = 0) {
+            const container = document.getElementById('additionalDeductions');
+            const rowId = deductionCount++;
+            
+            const rowHTML = `
+                <div class="deduction-row flex items-center gap-2" id="deductionRow${rowId}">
+                    <input type="text" placeholder="Deduction Name" class="deduction-name flex-1 px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#b0303b] focus:border-transparent" value="${name}">
+                    <div class="relative w-32">
+                        <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">₱</span>
+                        <input type="number" placeholder="Amount" class="deduction-amount w-full pl-8 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#b0303b] focus:border-transparent" value="${amount}" min="0" step="0.01">
+                    </div>
+                    <button type="button" onclick="removeDeductionRow(${rowId})" class="text-red-500 hover:text-red-700">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+            `;
+            
+            container.insertAdjacentHTML('beforeend', rowHTML);
+            
+            // Add event listeners to new inputs
+            document.querySelectorAll('.deduction-amount').forEach(input => {
+                input.removeEventListener('input', calculateTotals);
+                input.addEventListener('input', calculateTotals);
+            });
+        }
+
+        function removeDeductionRow(rowId) {
+            const row = document.getElementById(`deductionRow${rowId}`);
+            if (row) {
+                row.remove();
+                calculateTotals();
+            }
+        }
+
+        function calculateTotals() {
+            const gross = parseFloat(document.getElementById('grossSalary').value) || 0;
+            
+            // Get mandatory deductions
+            const sss = parseFloat(document.getElementById('sss').value) || 0;
+            const philhealth = parseFloat(document.getElementById('philhealth').value) || 0;
+            const pagibig = parseFloat(document.getElementById('pagibig').value) || 0;
+            
+            // Get additional deductions
+            let additionalTotal = 0;
+            document.querySelectorAll('.deduction-amount').forEach(input => {
+                additionalTotal += parseFloat(input.value) || 0;
+            });
+            
+            const totalDeduction = sss + philhealth + pagibig + additionalTotal;
+            const netSalary = gross - totalDeduction;
+            
+            // Update displays
+            document.getElementById('totalDeductionDisplay').textContent = '₱' + totalDeduction.toFixed(2);
+            document.getElementById('totalDeduction').value = totalDeduction.toFixed(2);
+            document.getElementById('netSalaryDisplay').textContent = '₱' + netSalary.toFixed(2);
+            document.getElementById('netSalary').value = netSalary.toFixed(2);
+        }
+
+        document.getElementById('payrollForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            try {
+                // Collect additional deductions
+                const additionalDeductions = [];
+                document.querySelectorAll('.deduction-row').forEach(row => {
+                    const name = row.querySelector('.deduction-name').value;
+                    const amount = parseFloat(row.querySelector('.deduction-amount').value) || 0;
+                    if (name && amount > 0) {
+                        additionalDeductions.push({ name, amount });
+                    }
+                });
+
+                const updatedPayroll = {
+                    id: payrollId,
+                    gross_salary: parseFloat(document.getElementById('grossSalary').value) || 0,
+                    sss: parseFloat(document.getElementById('sss').value) || 0,
+                    philhealth: parseFloat(document.getElementById('philhealth').value) || 0,
+                    pagibig: parseFloat(document.getElementById('pagibig').value) || 0,
+                    additional_deductions: additionalDeductions,
+                    total_deduction: parseFloat(document.getElementById('totalDeduction').value) || 0,
+                    net_salary: parseFloat(document.getElementById('netSalary').value) || 0,
+                    status: document.getElementById('status').value,
+                    updated_at: new Date().toISOString()
+                };
+
+                await Database.updatePayroll(updatedPayroll);
+                alert('Payroll updated successfully!');
+                window.location.href = 'payroll.html';
+            } catch (error) {
+                console.error('Error updating payroll:', error);
+                alert('Error updating payroll. Please try again.');
+            }
+        });
+
+        function goBack() {
+            window.location.href = 'payroll.html';
+        }
+    </script>
+</body>
+</html>

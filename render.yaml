@@ -1,0 +1,32 @@
+# render.yaml - Complete configuration for Render deployment
+services:
+  - type: web
+    name: philtech-payroll
+    runtime: php
+    repo: https://github.com/MERVINMICOSA/PAYROLL-main-c1b2350ac1d479cd751b45642165d5f2649fb390-87890cc75152fa39d9605e09a8f606d6990dd367.git
+    branch: main
+    buildCommand: |
+      # Ensure router.php exists and copy all files
+      cp -r * /opt/render/project/src/
+      # Create logs directory
+      mkdir -p /opt/render/project/src/logs
+    startCommand: cd /opt/render/project/src && php -S 0.0.0.0:10000 router.php
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: philtech-payroll-db
+          property: connectionString
+      - key: JWT_SECRET
+        generateValue: true
+      - key: SESSION_SECRET
+        generateValue: true
+    healthCheckPath: /api/health
+
+databases:
+  - name: philtech-payroll-db
+    databaseName: payroll_db
+    user: payroll_user
+    plan: free
+    postgresMajorVersion: 15

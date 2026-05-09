@@ -1,0 +1,188 @@
+// server.js - Main backend file for Render
+const express = require('express');
+const path = require('path');
+const cors = require('cors');
+const { Pool } = require('pg');
+const bcrypt = require('bcryptjs');
+
+const app = express();
+
+// --- IMPORTANT: Bind to 0.0.0.0 and use Render's PORT ---
+const PORT = process.env.PORT || 10000;  // Render provides this
+const HOST = '0.0.0.0';                   // Listen on ALL interfaces
+
+// Database connection using Render's DATABASE_URL
+const pool = new Pool({
+    connectionString: process.env.DATABASE_URL,
+    ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+});
+
+// Middleware
+app.use(cors());
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+// ============================================
+// DATABASE INITIALIZATION
+// ============================================
+async function initializeDatabase() {
+    try {
+        console.log('🔄 Initializing database...');
+        
+        // Create users table
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS users (
+                id SERIAL PRIMARY KEY,
+                username VARCHAR(50) UNIQUE NOT NULL,
+                password_hash VARCHAR(255) NOT NULL,
+                full_name VARCHAR(120),
+                email VARCHAR(120),
+                role VARCHAR(20) DEFAULT 'teacher',
+                status VARCHAR(20) DEFAULT 'Active',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        `);
+        console.log('✅ Users table ready');
+
+        // Create employees table
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS employees (
+                id SERIAL PRIMARY KEY,
+                employee_id VARCHAR(20) UNIQUE,
+                full_name VARCHAR(120) NOT NULL,
+                position VARCHAR(80),
+                department VARCHAR(80),
+                employment_type VARCHAR(20) DEFAULT 'Regular',
+                base_salary DECIMAL(10,2) DEFAULT 0,
+                email VARCHAR(120),
+                phone VARCHAR(20),
+                status VARCHAR(20) DEFAULT 'Active',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        `);
+        console.log('✅ Employees table ready');
+
+        // Check if default users exist
+        const result = await pool.query('SELECT COUNT(*) FROM users');
+        if (parseInt(result.rows[0].count) === 0) {
+            console.log('👤 Creating default users...');
+            const salt = await bcrypt.genSalt(10);
+            
+            // Passwords: admin123, superadmin123, teacher123
+            const adminHash = await bcrypt.hash('admin123', salt);
+            const superHash = await bcrypt.hash('superadmin123', salt);
+            const teacherHash = await bcrypt.hash('teacher123', salt);
+
+            await pool.query(`
+                INSERT INTO users (username, password_hash, full_name, role) VALUES 
+                ($1, $2, $3, $4),
+                ($5, $6, $7, $8),
+                ($9, $10, $11, $12)
+            `, [
+                'accountant', adminHash, 'School Accountant', 'accountant',
+                'superadmin', superHash, 'Super Admin', 'superadmin',
+                'teacher1', teacherHash, 'Sample Teacher', 'teacher'
+            ]);
+            console.log('✅ Default users created');
+        }
+
+        // Create sample employee if none exist
+        const empResult = await pool.query('SELECT COUNT(*) FROM employees');
+        if (parseInt(empResult.rows[0].count) === 0) {
+            await pool.query(`
+                INSERT INTO employees (employee_id, full_name, position, department, employment_type, base_salary, email, status)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+            `, [
+                'TCH001', 'Sample Teacher', 'Senior Teacher', 'Academic', 'Regular', 25000, 'teacher@philtech.edu', 'Active'
+            ]);
+            console.log('✅ Sample employee created');
+        }
+
+    } catch (err) {
+        console.error('❌ Database initialization error:', err);
+    }
+}
+
+// ============================================
+// API ROUTES
+// ============================================
+
+// Test endpoint
+app.get('/api/health', (req, res) => {
+    res.json({ status: 'ok', message: 'Server is running' });
+});
+
+// Login endpoint
+app.post('/api/auth/login', async (req, res) => {
+    try {
+        const { username, password } = req.body;
+        
+        if (!username || !password) {
+            return res.status(400).json({ error: 'Username and password required' });
+        }
+
+        const result = await pool.query(
+            'SELECT * FROM users WHERE username = $1 AND status = $2',
+            [username, 'Active']
+        );
+        
+        if (result.rows.length === 0) {
+            return res.status(401).json({ error: 'Invalid username or password' });
+        }
+        
+        const user = result.rows[0];
+        const isValid = await bcrypt.compare(password, user.password_hash);
+        
+        if (!isValid) {
+            return res.status(401).json({ error: 'Invalid username or password' });
+        }
+        
+        // Don't send password hash to client
+        const { password_hash, ...userInfo } = user;
+        res.json({ 
+            success: true, 
+            user: userInfo,
+            redirect: userInfo.role === 'superadmin' ? 'dashboardSadmin.html' :
+                     userInfo.role === 'accountant' ? 'dashboard.html' :
+                     'teacher-dashboard.html'
+        });
+        
+    } catch (error) {
+        console.error('Login error:', error);
+        res.status(500).json({ error: 'Server error' });
+    }
+});
+
+// Get all employees (for testing)
+app.get('/api/employees', async (req, res) => {
+    try {
+        const result = await pool.query('SELECT * FROM employees ORDER BY id');
+        res.json(result.rows);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// ============================================
+// STATIC FILES & FRONTEND ROUTING
+// ============================================
+
+// Serve static files (HTML, CSS, JS)
+app.use(express.static(__dirname));
+
+// Catch-all for frontend routes - send to index.html
+app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, 'index.html'));
+});
+
+// ============================================
+// START SERVER
+// ============================================
+app.listen(PORT, HOST, () => {
+    console.log(`✅ Server running at http://${HOST}:${PORT}/`);
+    console.log(`🌐 Public URL: https://your-app.onrender.com`);
+    console.log(`📁 Serving static files from: ${__dirname}`);
+});
+
+// Initialize database on startup
+initializeDatabase().catch(console.error);

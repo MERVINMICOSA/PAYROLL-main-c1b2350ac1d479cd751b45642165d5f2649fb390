@@ -1,0 +1,341 @@
+v<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Philtech GMA | Superadmin Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Security Scripts -->
+    <script src="js/csrf.js"></script>
+    <script src="js/xss-protection.js"></script>
+    <script src="js/secure-ajax.js"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #dcd3b8; }
+        .nav-link.active { background-color: #b0303b; color: white; }
+        .stat-card { transition: all 0.3s ease; }
+        .stat-card:hover { transform: translateY(-5px); box-shadow: 0 10px 25px -5px rgba(176, 48, 59, 0.2); }
+        
+        .approval-card {
+            background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+            color: white;
+            border-radius: 16px;
+            padding: 20px;
+            position: relative;
+            overflow: hidden;
+        }
+        .approval-card::after { content: '⏳'; position: absolute; bottom: -20px; right: -20px; font-size: 100px; opacity: 0.1; transform: rotate(-15deg); }
+        
+        .pending-item {
+            background: white;
+            border-radius: 12px;
+            padding: 12px 16px;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            transition: all 0.3s;
+        }
+        .pending-item:hover { transform: translateX(5px); box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+        
+        .approve-btn { background-color: #10b981; color: white; padding: 6px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: 500; cursor: pointer; transition: all 0.3s; }
+        .approve-btn:hover { background-color: #059669; transform: translateY(-1px); }
+        
+        .reject-btn { background-color: #ef4444; color: white; padding: 6px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: 500; cursor: pointer; transition: all 0.3s; }
+        .reject-btn:hover { background-color: #dc2626; transform: translateY(-1px); }
+        
+        .modal { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000; }
+        .modal-content { background: white; border-radius: 16px; padding: 24px; max-width: 400px; width: 90%; }
+    </style>
+</head>
+<body class="text-gray-700 antialiased min-h-screen">
+
+    <nav class="bg-[#8a1f27] text-white px-6 py-3 flex justify-between items-center sticky top-0 z-50 shadow-md">
+        <div class="flex items-center gap-2"><div class="w-8 h-8 bg-[#b0303b] rounded-lg flex items-center justify-center"><i class="fa-solid fa-crown text-[#f4e8c1]"></i></div><span class="font-bold text-lg">Philtech GMA - Superadmin</span></div>
+        <div class="hidden md:flex items-center gap-1">
+            <a href="dashboardSadmin.html" class="nav-link active px-4 py-2 rounded-lg bg-[#b0303b] text-white font-medium">Dashboard</a>
+            <a href="employeesSadmin.html" class="nav-link px-4 py-2 rounded-lg hover:bg-[#d98989] transition-colors font-medium">Employees</a>
+            <a href="payrollSadmin.html" class="nav-link px-4 py-2 rounded-lg hover:bg-[#d98989] transition-colors font-medium">Payroll</a>
+            <a href="user-mgmt.html" class="nav-link px-4 py-2 rounded-lg hover:bg-[#d98989] transition-colors font-medium">Users</a>
+            <a href="settingsSadmin.html" class="nav-link px-4 py-2 rounded-lg hover:bg-[#d98989] transition-colors font-medium">Settings</a>
+        </div>
+        <div class="flex items-center gap-3"><span class="text-sm hidden sm:block" id="userName">Superadmin</span><div class="relative group"><img src="https://i.pravatar.cc/150?u=superadmin" class="w-8 h-8 rounded-full border-2 border-white cursor-pointer"><div class="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg py-1 hidden group-hover:block z-50"><a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Profile</a><a href="#" onclick="logout()" class="block px-4 py-2 text-sm text-red-600 hover:bg-gray-100">Logout</a></div></div></div>
+    </nav>
+
+    <main class="p-6 md:p-8 max-w-7xl mx-auto">
+        <div class="flex justify-between items-center mb-8">
+            <div><h1 class="text-2xl font-bold text-[#8a1f27]">Superadmin Dashboard</h1><p class="text-gray-500 text-sm mt-1" id="currentDate"></p></div>
+            <button onclick="refreshDashboard()" class="bg-white px-4 py-2 rounded-lg text-sm font-medium shadow-sm hover:shadow-md transition-shadow flex items-center gap-2"><i class="fa-solid fa-rotate-right text-[#b0303b]"></i> Refresh</button>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 stat-card"><div class="flex items-center gap-3 mb-3"><div class="w-10 h-10 rounded-lg bg-[#b0303b]/10 text-[#b0303b] flex items-center justify-center"><i class="fa-solid fa-users"></i></div><span class="text-sm font-medium text-gray-500">Total Employees</span></div><h2 class="text-2xl font-bold text-gray-800" id="totalEmployees">0</h2></div>
+            <div class="bg-white p-6 rounded-2xl shadow-sm stat-card"><div class="flex items-center gap-3 mb-3"><div class="w-10 h-10 rounded-lg bg-[#b0303b]/10 text-[#b0303b] flex items-center justify-center"><i class="fa-solid fa-money-bill-wave"></i></div><span class="text-sm font-medium text-gray-500">Total Payroll</span></div><h2 class="text-2xl font-bold text-gray-800" id="totalPayroll">₱0</h2></div>
+            <div class="bg-white p-6 rounded-2xl shadow-sm stat-card"><div class="flex items-center gap-3 mb-3"><div class="w-10 h-10 rounded-lg bg-[#b0303b]/10 text-[#b0303b] flex items-center justify-center"><i class="fa-solid fa-user-gear"></i></div><span class="text-sm font-medium text-gray-500">System Users</span></div><h2 class="text-2xl font-bold text-gray-800" id="totalUsers">0</h2></div>
+            <div class="bg-white p-6 rounded-2xl shadow-sm stat-card"><div class="flex items-center gap-3 mb-3"><div class="w-10 h-10 rounded-lg bg-[#b0303b]/10 text-[#b0303b] flex items-center justify-center"><i class="fa-regular fa-clock"></i></div><span class="text-sm font-medium text-gray-500">Pending Approvals</span></div><h2 class="text-2xl font-bold text-yellow-600" id="pendingApprovals">0</h2></div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+            <div class="lg:col-span-1">
+                <div class="approval-card h-full">
+                    <h3 class="text-lg font-bold mb-4 flex items-center gap-2"><i class="fa-regular fa-bell"></i> Pending Approvals</h3>
+                    <div class="text-3xl font-bold mb-2" id="pendingCount">0</div>
+                    <p class="text-white/80 text-sm mb-4">payroll records waiting</p>
+                    <button onclick="goToPendingPayroll()" class="bg-white/20 text-white px-4 py-2 rounded-lg hover:bg-white/30 transition-colors w-full">Review Now</button>
+                </div>
+            </div>
+            <div class="lg:col-span-2 bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+                <h3 class="font-semibold text-gray-800 mb-4">Recent Pending Payroll</h3>
+                <div id="pendingList" class="space-y-2"><div class="text-center text-gray-400 py-4">Loading pending approvals...</div></div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+            <div class="lg:col-span-2 bg-white p-6 rounded-2xl shadow-sm"><h3 class="font-semibold text-gray-800 mb-4">Payroll Trend (Monthly)</h3><div class="h-64"><canvas id="payrollChart"></canvas></div></div>
+            <div class="bg-white p-6 rounded-2xl shadow-sm"><h3 class="font-semibold text-gray-800 mb-4">Approval Status</h3><div class="h-64"><canvas id="approvalChart"></canvas></div></div>
+        </div>
+    </main>
+
+<div id="rejectModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <h3 class="text-xl font-bold text-[#8a1f27] mb-4">Reject Payroll</h3>
+            <textarea id="rejectReason" rows="3" class="w-full px-4 py-2 border rounded-lg mb-4" placeholder="Reason for rejection..."></textarea>
+            <div class="flex gap-3 justify-end">
+                <button onclick="closeRejectModal()" class="px-4 py-2 border rounded-lg">Cancel</button>
+                <button onclick="confirmReject()" class="px-4 py-2 bg-red-600 text-white rounded-lg">Reject</button>
+            </div>
+        </div>
+    </div>
+
+<script src="js/api-integration.js"></script>
+    <script src="js/database.js"></script>
+    <script src="js/navigation.js"></script>
+    <script>
+        console.log("=== SUPERADMIN DASHBOARD LOADED ===");
+        
+        let currentRejectId = null;
+        let payrollChart = null;
+        let approvalChart = null;
+        let allEmployees = [];
+        let allPayroll = [];
+        let allUsers = [];
+        
+        // Direct API calls (like accountant pages)
+        async function loadEmployeesFromAPI() {
+            try {
+                const response = await fetch('/api/employees.php', { credentials: 'include' });
+                if (!response.ok) return [];
+                return await response.json();
+            } catch (error) {
+                console.error("Error loading employees:", error);
+                return [];
+            }
+        }
+        
+        async function loadPayrollFromAPI() {
+            try {
+                const response = await fetch('/api/payroll.php', { credentials: 'include' });
+                if (!response.ok) return [];
+                return await response.json();
+            } catch (error) {
+                console.error("Error loading payroll:", error);
+                return [];
+            }
+        }
+        
+        async function loadUsersFromAPI() {
+            try {
+                const response = await fetch('/api/users.php', { credentials: 'include' });
+                if (!response.ok) return [];
+                return await response.json();
+            } catch (error) {
+                console.error("Error loading users:", error);
+                return [];
+            }
+        }
+        
+        async function loadDashboardData() {
+            try {
+                allEmployees = await loadEmployeesFromAPI();
+                allPayroll = await loadPayrollFromAPI();
+                allUsers = await loadUsersFromAPI();
+                
+                document.getElementById('totalEmployees').textContent = allEmployees.length;
+                const totalPayroll = allPayroll.reduce((s, p) => s + parseFloat(p.net_salary || 0), 0);
+                document.getElementById('totalPayroll').textContent = '₱' + totalPayroll.toLocaleString();
+                document.getElementById('totalUsers').textContent = allUsers.length;
+                
+                const pendingCount = allPayroll.filter(p => p.status === 'Pending').length;
+                document.getElementById('pendingApprovals').textContent = pendingCount;
+                document.getElementById('pendingCount').textContent = pendingCount;
+                
+                const pendingPayroll = allPayroll.filter(p => p.status === 'Pending').slice(0, 5);
+                let pendingHtml = '';
+                if (pendingPayroll.length === 0) {
+                    pendingHtml = '<div class="text-center text-gray-400 py-4">No pending approvals</div>';
+                } else {
+                    pendingHtml = pendingPayroll.map(p => {
+                        const emp = allEmployees.find(e => e.id === p.employee_id) || { full_name: 'Unknown' };
+                        return `
+                            <div class="pending-item">
+                                <div>
+                                    <p class="font-medium text-gray-800">${emp.full_name}</p>
+                                    <p class="text-xs text-gray-400">${p.period} • ₱${(p.net_salary || 0).toLocaleString()}</p>
+                                </div>
+                                <div class="flex gap-2">
+                                    <button onclick="approvePayroll(${p.id})" class="approve-btn"><i class="fa-regular fa-circle-check mr-1"></i>Approve</button>
+                                    <button onclick="openRejectModal(${p.id})" class="reject-btn"><i class="fa-regular fa-circle-xmark mr-1"></i>Reject</button>
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
+                }
+                document.getElementById('pendingList').innerHTML = pendingHtml;
+                
+                updateCharts(allPayroll);
+            } catch (error) {
+                console.error('Error loading dashboard data:', error);
+            }
+        }
+        
+        function updateCharts(payroll) {
+            const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+            const monthlyData = new Array(12).fill(0);
+            payroll.forEach(p => {
+                if (p.period) {
+                    const monthIndex = months.findIndex(m => p.period.includes(m));
+                    if (monthIndex !== -1) monthlyData[monthIndex] += p.net_salary || 0;
+                }
+            });
+            
+            const payrollCanvas = document.getElementById('payrollChart');
+            if (payrollCanvas && typeof Chart !== 'undefined') {
+                if (payrollChart) payrollChart.destroy();
+                payrollChart = new Chart(payrollCanvas, {
+                    type: 'bar',
+                    data: { labels: months, datasets: [{ label: 'Net Payroll', data: monthlyData, backgroundColor: '#b0303b', borderRadius: 8 }] },
+                    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+                });
+            }
+            
+            const pending = payroll.filter(p => p.status === 'Pending').length;
+            const approved = payroll.filter(p => p.status === 'Approved').length;
+            const rejected = payroll.filter(p => p.status === 'Rejected').length;
+            
+            const approvalCanvas = document.getElementById('approvalChart');
+            if (approvalCanvas && typeof Chart !== 'undefined') {
+                if (approvalChart) approvalChart.destroy();
+                approvalChart = new Chart(approvalCanvas, {
+                    type: 'doughnut',
+                    data: { labels: ['Pending', 'Approved', 'Rejected'], datasets: [{ data: [pending, approved, rejected], backgroundColor: ['#fbbf24', '#34d399', '#ef4444'], borderWidth: 0 }] },
+                    options: { cutout: '70%', plugins: { legend: { position: 'bottom' } } }
+                });
+            }
+        }
+        
+window.approvePayroll = async function(id) {
+            if (!confirm('Approve this payroll record?')) return;
+            try {
+                const payroll = allPayroll.find(p => p.id === id);
+                if (payroll) {
+                    payroll.status = 'Approved';
+                    payroll.approved = true;
+                    payroll.approved_at = new Date().toISOString();
+                    payroll.approved_by = 'superadmin';
+                    
+                    const response = await fetch('/api/payroll.php', {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        credentials: 'include',
+                        body: JSON.stringify({ id, status: 'Approved', approved: true, approved_at: payroll.approved_at, approved_by: payroll.approved_by })
+                    });
+                    
+                    if (response.ok) {
+                        alert('Payroll approved successfully!');
+                        await loadDashboardData();
+                    } else {
+                        throw new Error('Failed to approve');
+                    }
+                }
+            } catch (error) {
+                console.error('Error approving payroll:', error);
+                alert('Error approving payroll: ' + error.message);
+            }
+        };
+        
+window.openRejectModal = function(id) {
+            currentRejectId = id;
+            document.getElementById('rejectModal').style.display = 'flex';
+        };
+        
+        window.closeRejectModal = function() {
+            currentRejectId = null;
+            document.getElementById('rejectModal').style.display = 'none';
+            document.getElementById('rejectReason').value = '';
+        };
+        
+window.confirmReject = async function() {
+            const reason = document.getElementById('rejectReason').value;
+            if (!reason) {
+                alert('Please provide a reason for rejection');
+                return;
+            }
+            try {
+                const payroll = allPayroll.find(p => p.id === currentRejectId);
+                if (!payroll) {
+                    alert('Payroll record not found');
+                    closeRejectModal();
+                    return;
+                }
+                
+                payroll.status = 'Rejected';
+                payroll.approved = false;
+                payroll.rejection_reason = reason;
+                payroll.rejected_at = new Date().toISOString();
+                payroll.rejected_by = 'superadmin';
+                
+                const response = await fetch('/api/payroll.php', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ id: currentRejectId, status: 'Rejected', rejection_reason: reason, rejected_at: payroll.rejected_at, rejected_by: payroll.rejected_by })
+                });
+                
+                // Always close modal first, regardless of API result
+                closeRejectModal();
+                
+                if (response.ok) {
+                    alert('Payroll rejected successfully!');
+                    await loadDashboardData();
+                } else {
+                    // Even if API fails, try to reload to show current state
+                    await loadDashboardData();
+                }
+            } catch (error) {
+                console.error('Error rejecting payroll:', error);
+                // Force close modal on any error
+                closeRejectModal();
+                // Reload data to refresh the view
+                await loadDashboardData();
+            }
+        };
+        
+        window.goToPendingPayroll = function() {
+            window.location.href = 'payrollSadmin.html?filter=pending';
+        };
+        
+        window.refreshDashboard = function() { loadDashboardData(); };
+        
+        window.logout = function() { localStorage.clear(); window.location.href = 'index.html'; };
+        
+        // Set current date
+        document.getElementById('currentDate').textContent = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+        
+        // Start loading
+        loadDashboardData();
+    </script>
+</body>
+</html>

@@ -1,0 +1,622 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Philtech GMA | Employees Management</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #dcd3b8; }
+        .nav-link.active { background-color: #b0303b; color: white; }
+        .employee-row:hover { background-color: rgba(217, 137, 137, 0.1); }
+        .archive-toggle {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            background: white;
+            border-radius: 50px;
+            border: 1px solid #e5e7eb;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .archive-toggle.active { background: #b0303b; color: white; border-color: #b0303b; }
+        .archive-toggle.active i { color: white; }
+        .status-active { background-color: #d4edda; color: #155724; padding: 4px 12px; border-radius: 50px; font-size: 0.75rem; font-weight: 500; }
+        .status-archived { background-color: #e2e3e5; color: #6c757d; padding: 4px 12px; border-radius: 50px; font-size: 0.75rem; font-weight: 500; }
+    </style>
+</head>
+<body class="text-gray-700 antialiased min-h-screen">
+
+    <nav class="bg-[#8a1f27] text-white px-6 py-3 flex justify-between items-center sticky top-0 z-50 shadow-md">
+        <div class="flex items-center gap-2">
+            <div class="w-8 h-8 bg-[#b0303b] rounded-lg flex items-center justify-center">
+                <i class="fa-solid fa-users text-[#f4e8c1]"></i>
+            </div>
+            <span class="font-bold text-lg">Philtech GMA</span>
+        </div>
+        
+        <div class="hidden md:flex items-center gap-1">
+            <a href="dashboard.html" class="nav-link px-4 py-2 rounded-lg hover:bg-[#d98989] transition-colors font-medium">Dashboard</a>
+            <a href="employees.html" class="nav-link active px-4 py-2 rounded-lg bg-[#b0303b] text-white font-medium">Employees</a>
+            <a href="payroll.html" class="nav-link px-4 py-2 rounded-lg hover:bg-[#d98989] transition-colors font-medium">Payroll</a>
+            <a href="attendance.html" class="nav-link px-4 py-2 rounded-lg hover:bg-[#d98989] transition-colors font-medium">Attendance</a>
+            <a href="settings.html" class="nav-link px-4 py-2 rounded-lg hover:bg-[#d98989] transition-colors font-medium">Settings</a>
+        </div>
+        
+        <div class="flex items-center gap-3">
+            <span class="text-sm hidden sm:block" id="userName">Accountant</span>
+            <div class="relative group">
+                <img src="https://i.pravatar.cc/150?u=accountant" class="w-8 h-8 rounded-full border-2 border-white cursor-pointer">
+                <div class="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg py-1 hidden group-hover:block z-50">
+                    <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Profile</a>
+                    <a href="#" onclick="logout()" class="block px-4 py-2 text-sm text-red-600 hover:bg-gray-100">Logout</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="p-6 md:p-8 max-w-7xl mx-auto">
+        
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+            <div>
+                <h1 class="text-2xl font-bold text-[#8a1f27]">Employees Management</h1>
+                <p class="text-gray-500 text-sm mt-1" id="currentDate"></p>
+            </div>
+            <div class="flex items-center gap-3 w-full md:w-auto">
+                <div class="archive-toggle" id="archiveToggle" onclick="toggleArchiveView()">
+                    <i class="fa-regular fa-folder-open"></i>
+                    <span>Show Active</span>
+                </div>
+                <div class="relative flex-1 md:w-64">
+                    <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                    <input type="text" id="searchInput" placeholder="Search employees..." class="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#b0303b] focus:border-transparent">
+                </div>
+                <button onclick="openAddEmployeeModal()" class="bg-[#b0303b] text-white px-4 py-2 rounded-lg hover:bg-[#8a1f27] transition-colors flex items-center gap-2">
+                    <i class="fa-solid fa-plus"></i> Add Employee
+                </button>
+            </div>
+        </div>
+
+        <div class="flex gap-3 mb-6">
+            <select id="typeFilter" class="border border-gray-200 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-[#b0303b]">
+                <option value="all">All Types</option>
+                <option value="shs_only">SHS Only</option>
+                <option value="college_only">College Only</option>
+                <option value="both">Both SHS & College</option>
+                <option value="admin">Admin Staff</option>
+                <option value="guard">Security Guard</option>
+                <option value="sa">Student Assistant</option>
+            </select>
+            <select id="statusFilter" class="border border-gray-200 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-[#b0303b]">
+                <option value="all">All Status</option>
+                <option value="Active">Active</option>
+                <option value="Archived">Archived</option>
+            </select>
+            <button onclick="clearFilters()" class="text-sm text-gray-500 hover:text-gray-700">
+                <i class="fa-regular fa-times-circle mr-1"></i> Clear Filters
+            </button>
+        </div>
+
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="w-full text-left">
+                    <thead class="bg-gray-50 text-xs text-gray-500">
+                        <tr>
+                            <th class="py-3 px-6">ID</th>
+                            <th class="py-3">Name</th>
+                            <th class="py-3">Position</th>
+                            <th class="py-3">Type</th>
+                            <th class="py-3">Rate</th>
+                            <th class="py-3">Assignment</th>
+                            <th class="py-3">Status</th>
+                            <th class="py-3 text-right pr-6">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody class="text-sm" id="employeeTableBody">
+                        <tr><td colspan="8" class="py-8 text-center text-gray-400">Loading...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="px-6 py-3 border-t border-gray-100 flex justify-between items-center">
+                <span class="text-xs text-gray-400" id="paginationInfo">Showing 0-0 of 0</span>
+                <div class="flex gap-1" id="paginationControls"></div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Add Employee Modal -->
+    <div id="addEmployeeModal" class="fixed inset-0 bg-black/50 flex items-center justify-center hidden z-50">
+        <div class="bg-white rounded-2xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div class="p-6 border-b border-gray-100 flex justify-between items-center sticky top-0 bg-white">
+                <h3 class="text-xl font-bold text-[#8a1f27]">Add New Employee</h3>
+                <button onclick="closeAddEmployeeModal()" class="text-gray-400 hover:text-gray-600"><i class="fa-solid fa-xmark text-2xl"></i></button>
+            </div>
+            <div class="p-6">
+                <form id="addEmployeeForm" class="space-y-6">
+                    <!-- Personal Information -->
+                    <div>
+                        <h4 class="font-medium text-gray-800 mb-3 flex items-center gap-2"><i class="fa-regular fa-user text-[#b0303b]"></i> Personal Information</h4>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div><label class="block text-sm font-medium text-gray-700 mb-2">Full Name *</label><input type="text" id="fullName" required class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#b0303b]"></div>
+                            <div><label class="block text-sm font-medium text-gray-700 mb-2">Email</label><input type="email" id="email" class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#b0303b]"></div>
+                            <div><label class="block text-sm font-medium text-gray-700 mb-2">Phone</label><input type="tel" id="phone" class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#b0303b]"></div>
+                            <div><label class="block text-sm font-medium text-gray-700 mb-2">Birth Date</label><input type="date" id="birthDate" class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#b0303b]"></div>
+                        </div>
+                    </div>
+                    
+                    <!-- Employment Details -->
+                    <div class="border-t border-gray-100 pt-4">
+                        <h4 class="font-medium text-gray-800 mb-3 flex items-center gap-2"><i class="fa-solid fa-briefcase text-[#b0303b]"></i> Employment Details</h4>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div><label class="block text-sm font-medium text-gray-700 mb-2">Position *</label><input type="text" id="position" required class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#b0303b]"></div>
+                            <div><label class="block text-sm font-medium text-gray-700 mb-2">Department</label><select id="department" class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#b0303b]"><option value="Academic">Academic</option><option value="Administration">Administration</option><option value="Finance">Finance</option><option value="Maintenance">Maintenance</option></select></div>
+                            <div><label class="block text-sm font-medium text-gray-700 mb-2">Employment Type *</label><select id="employmentType" required class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#b0303b]"><option value="Regular">Regular</option><option value="Contractual">Contractual</option><option value="Part-time">Part-time</option><option value="Probationary">Probationary</option></select></div>
+                            <div><label class="block text-sm font-medium text-gray-700 mb-2">Hire Date</label><input type="date" id="hireDate" class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#b0303b]"></div>
+                            <div><label class="block text-sm font-medium text-gray-700 mb-2">Status</label><select id="status" class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#b0303b]"><option value="Active">Active</option><option value="Inactive">Inactive</option><option value="On Leave">On Leave</option></select></div>
+                        </div>
+                    </div>
+                    
+                    <!-- Compensation -->
+                    <div class="border-t border-gray-100 pt-4">
+                        <h4 class="font-medium text-gray-800 mb-3 flex items-center gap-2"><i class="fa-solid fa-money-bill-wave text-[#b0303b]"></i> Compensation</h4>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div><label class="block text-sm font-medium text-gray-700 mb-2">Base Salary</label><input type="number" id="salary" step="0.01" class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#b0303b]"></div>
+                            <div><label class="block text-sm font-medium text-gray-700 mb-2">Hourly Rate</label><input type="number" id="hourlyRate" step="0.01" class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#b0303b]"></div>
+                            <div><label class="block text-sm font-medium text-gray-700 mb-2">Admin Pay Rate</label><input type="number" id="adminPayRate" step="0.01" class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#b0303b]"></div>
+                        </div>
+                    </div>
+                    
+                    <!-- Government Numbers -->
+                    <div class="border-t border-gray-100 pt-4">
+                        <h4 class="font-medium text-gray-800 mb-3 flex items-center gap-2"><i class="fa-solid fa-id-card text-[#b0303b]"></i> Government Numbers</h4>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div><label class="block text-sm font-medium text-gray-700 mb-2">SSS Number</label><input type="text" id="sss" class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#b0303b]"></div>
+                            <div><label class="block text-sm font-medium text-gray-700 mb-2">PhilHealth Number</label><input type="text" id="philhealth" class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#b0303b]"></div>
+                            <div><label class="block text-sm font-medium text-gray-700 mb-2">Pag-IBIG Number</label><input type="text" id="pagibig" class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#b0303b]"></div>
+                            <div><label class="block text-sm font-medium text-gray-700 mb-2">TIN Number</label><input type="text" id="tin" class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#b0303b]"></div>
+                        </div>
+                    </div>
+                    
+                    <!-- Emergency Contact -->
+                    <div class="border-t border-gray-100 pt-4">
+                        <h4 class="font-medium text-gray-800 mb-3 flex items-center gap-2"><i class="fa-solid fa-phone text-[#b0303b]"></i> Emergency Contact</h4>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div><label class="block text-sm font-medium text-gray-700 mb-2">Contact Person</label><input type="text" id="emergencyName" class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#b0303b]"></div>
+                            <div><label class="block text-sm font-medium text-gray-700 mb-2">Relationship</label><input type="text" id="emergencyRelation" class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#b0303b]"></div>
+                            <div><label class="block text-sm font-medium text-gray-700 mb-2">Phone Number</label><input type="tel" id="emergencyPhone" class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#b0303b]"></div>
+                        </div>
+                    </div>
+                    
+                    <!-- Login Credentials -->
+                    <div class="border-t border-gray-100 pt-4">
+                        <h4 class="font-medium text-gray-800 mb-3">Login Credentials</h4>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div><label class="block text-sm font-medium text-gray-700 mb-2">Username *</label><input type="text" id="username" required class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#b0303b]"></div>
+                            <div><label class="block text-sm font-medium text-gray-700 mb-2">Password *</label><input type="password" id="password" required class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#b0303b]"></div>
+                        </div>
+                    </div>
+                    
+                    <!-- Employee Assignment -->
+                    <div class="border-t border-gray-100 pt-4">
+                        <h4 class="font-medium text-gray-800 mb-3">Employee Assignment</h4>
+                        <div class="space-y-4">
+                            <div><label class="block text-sm font-medium text-gray-700 mb-2">Assignment Type *</label>
+                                <select id="assignmentType" required onchange="toggleAssignmentFields()" class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#b0303b]">
+                                    <option value="shs_only">SHS Only</option><option value="college_only">College Only</option>
+                                    <option value="both">Both SHS and College</option><option value="admin">Admin Staff</option>
+                                    <option value="guard">Security Guard</option><option value="sa">Student Assistant</option>
+                                </select>
+                            </div>
+                            <div id="shsFields" class="space-y-4"><div><label class="block text-sm font-medium text-gray-700 mb-2">SHS Rate (per hour)</label><input type="number" id="shsRate" step="0.01" value="80" class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#b0303b]"></div>
+                            <div><label class="block text-sm font-medium text-gray-700 mb-2">SHS Subjects</label><input type="text" id="shsSubjects" placeholder="e.g., Math, Science" class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#b0303b]"></div></div>
+                            <div id="collegeFields" class="space-y-4"><div><label class="block text-sm font-medium text-gray-700 mb-2">College Rate (per hour)</label><input type="number" id="collegeRate" step="0.01" value="85" class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#b0303b]"></div>
+                            <div><label class="block text-sm font-medium text-gray-700 mb-2">College Subjects</label><input type="text" id="collegeSubjects" placeholder="e.g., Calculus, Physics" class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#b0303b]"></div></div>
+                            <div id="adminFields" class="space-y-4 hidden"><div><label class="block text-sm font-medium text-gray-700 mb-2">Admin Rate (per hour)</label><input type="number" id="adminRate" step="0.01" value="70" class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#b0303b]"></div>
+                            <div><label class="block text-sm font-medium text-gray-700 mb-2">Position</label><input type="text" id="adminPosition" placeholder="e.g., Branch Administrator" class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#b0303b]"></div></div>
+                            <div id="guardFields" class="space-y-4 hidden"><div><label class="block text-sm font-medium text-gray-700 mb-2">Daily Rate</label><input type="number" id="guardRate" step="0.01" value="433" class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#b0303b]"></div></div>
+                            <div id="saFields" class="space-y-4 hidden"><div><label class="block text-sm font-medium text-gray-700 mb-2">Hourly Rate</label><input type="number" id="saRate" step="0.01" value="100" class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#b0303b]"></div></div>
+                        </div>
+                    </div>
+                    <div class="flex justify-end gap-3 pt-4 border-t border-gray-100">
+                        <button type="button" onclick="closeAddEmployeeModal()" class="px-6 py-2 border border-gray-200 rounded-lg font-medium hover:bg-gray-50">Cancel</button>
+                        <button type="submit" class="px-6 py-2 bg-[#b0303b] text-white rounded-lg font-medium hover:bg-[#8a1f27]">Create Employee</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Archive Modal -->
+    <div id="archiveModal" class="fixed inset-0 bg-black/50 flex items-center justify-center hidden z-50">
+        <div class="bg-white rounded-2xl max-w-md w-full mx-4">
+            <div class="p-6 border-b border-gray-100"><h3 class="text-xl font-bold text-[#8a1f27]">Archive Employee</h3></div>
+            <div class="p-6">
+                <p class="text-gray-600 mb-4">Are you sure you want to archive <span id="archiveEmployeeName" class="font-bold"></span>?</p>
+                <p class="text-sm text-gray-500 mb-6">Archived employees can be restored later from the archive view.</p>
+                <div class="mb-4"><label class="block text-sm font-medium text-gray-700 mb-2">Reason for archiving (optional)</label><textarea id="archiveReason" rows="2" class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#b0303b]" placeholder="e.g., Resigned, Transferred, etc."></textarea></div>
+                <div class="flex gap-3">
+                    <button onclick="confirmArchive()" class="flex-1 bg-[#b0303b] text-white py-2 rounded-lg hover:bg-[#8a1f27]">Archive Employee</button>
+                    <button onclick="closeArchiveModal()" class="flex-1 bg-gray-200 py-2 rounded-lg hover:bg-gray-300">Cancel</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/navigation.js"></script>
+    
+    <script>
+        let allEmployees = [];
+        let filteredEmployees = [];
+        let currentPage = 1;
+        let itemsPerPage = 8;
+        let showArchived = false;
+        let currentArchiveId = null;
+        
+        // Load employees from API
+        async function loadEmployees() {
+            try {
+                const response = await fetch('/api/employees.php', {
+                    credentials: 'include'
+                });
+                
+                if (!response.ok) {
+                    if (response.status === 401) {
+                        window.location.href = 'index.html';
+                        return;
+                    }
+                    const errorData = await response.json().catch(() => ({error: 'Unknown error'}));
+                    throw new Error(errorData.error || 'Failed to fetch employees');
+                }
+                
+                const contentType = response.headers.get('content-type');
+                if (!contentType || !contentType.includes('application/json')) {
+                    const text = await response.text();
+                    console.error('Non-JSON response:', text);
+                    throw new Error('Server returned invalid response');
+                }
+                
+                allEmployees = await response.json();
+                console.log("Employees loaded:", allEmployees.length);
+                filterEmployees();
+            } catch (error) {
+                console.error("Error loading employees:", error);
+                document.getElementById('employeeTableBody').innerHTML = '<td colspan="8" class="py-8 text-center text-red-500">Error loading employees: ' + error.message + '</td>';
+            }
+        }
+        
+        function filterEmployees() {
+            const searchTerm = document.getElementById('searchInput')?.value.toLowerCase() || '';
+            const typeFilter = document.getElementById('typeFilter')?.value || 'all';
+            const statusFilter = document.getElementById('statusFilter')?.value || 'all';
+            
+            filteredEmployees = allEmployees.filter(emp => {
+                if (statusFilter !== 'all' && emp.status !== statusFilter) return false;
+                if (!showArchived && emp.status === 'Archived') return false;
+                if (showArchived && emp.status !== 'Archived') return false;
+                
+                const matchesSearch = (emp.full_name || '').toLowerCase().includes(searchTerm) ||
+                                     (emp.position || '').toLowerCase().includes(searchTerm);
+                
+                let matchesType = true;
+                if (typeFilter !== 'all') {
+                    const assignment = emp.assignment || 'regular';
+                    matchesType = assignment === typeFilter;
+                }
+                return matchesSearch && matchesType;
+            });
+            
+            currentPage = 1;
+            renderTable();
+        }
+        
+        function renderTable() {
+            const start = (currentPage - 1) * itemsPerPage;
+            const end = start + itemsPerPage;
+            const pageData = filteredEmployees.slice(start, end);
+            const totalPages = Math.ceil(filteredEmployees.length / itemsPerPage);
+            
+            const tbody = document.getElementById('employeeTableBody');
+            if (!tbody) return;
+            
+            if (pageData.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" class="py-8 text-center text-gray-400">No employees found</td></tr>';
+            } else {
+                tbody.innerHTML = pageData.map(emp => {
+                    let assignmentDisplay = emp.assignment || 'N/A', rateDisplay = '—';
+                    switch(emp.assignment) {
+                        case 'shs_only': rateDisplay = `₱${emp.rate_shs || 80}/hr`; assignmentDisplay = 'SHS'; break;
+                        case 'college_only': rateDisplay = `₱${emp.rate_college || 85}/hr`; assignmentDisplay = 'College'; break;
+                        case 'both': rateDisplay = `SHS: ₱${emp.rate_shs || 80} / CLG: ₱${emp.rate_college || 85}`; assignmentDisplay = 'SHS+CLG'; break;
+                        case 'admin': rateDisplay = `₱${emp.rate_admin || 70}/hr`; assignmentDisplay = 'Admin'; break;
+                        case 'guard': rateDisplay = `₱${emp.rate_guard || 433}/day`; assignmentDisplay = 'Guard'; break;
+                        case 'sa': rateDisplay = `₱${emp.rate_sa || 100}/hr`; assignmentDisplay = 'SA'; break;
+                        default: rateDisplay = `₱${emp.base_salary || 0}`;
+                    }
+                    
+                    let actions = '';
+                    if (emp.status === 'Active') {
+                        actions = `<button onclick="editEmployee('${emp.id}')" class="text-[#b0303b] hover:text-[#8a1f27] mr-2" title="Edit"><i class="fa-regular fa-pen-to-square"></i></button>
+                                   <button onclick="viewEmployee('${emp.id}')" class="text-[#b0303b] hover:text-[#8a1f27] mr-2" title="View"><i class="fa-regular fa-eye"></i></button>
+                                   <button onclick="openArchiveModal('${emp.id}', '${escapeHtml(emp.full_name)}')" class="text-gray-400 hover:text-red-600" title="Archive"><i class="fa-regular fa-box-archive"></i></button>`;
+                    } else {
+                        actions = `<button onclick="restoreEmployee('${emp.id}')" class="text-green-600 hover:text-green-800 mr-2" title="Restore"><i class="fa-regular fa-arrow-rotate-left"></i></button>
+                                   <button onclick="deleteEmployee('${emp.id}')" class="text-red-600 hover:text-red-800" title="Delete"><i class="fa-regular fa-trash-can"></i></button>`;
+                    }
+                    
+                    return `<tr class="border-b hover:bg-gray-50 ${emp.status === 'Archived' ? 'opacity-60' : ''}">
+                        <td class="py-3 px-6 font-mono text-xs">${emp.id}</td>
+                        <td class="py-3 font-medium">${escapeHtml(emp.full_name)}</td>
+                        <td class="py-3">${escapeHtml(emp.position || '—')}</td>
+                        <td class="py-3"><span class="px-2 py-1 bg-[#b0303b]/10 text-[#b0303b] rounded-full text-xs">${assignmentDisplay}</span></td>
+                        <td class="py-3 text-sm">${rateDisplay}</td>
+                        <td class="py-3"><span class="px-2 py-1 rounded-full text-xs ${emp.assignment === 'both' ? 'bg-purple-100 text-purple-600' : 'bg-gray-100 text-gray-600'}">${emp.assignment || 'Regular'}</span></td>
+                        <td class="py-3"><span class="px-2 py-1 rounded-full text-xs ${emp.status === 'Active' ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-600'}">${emp.status || 'Active'}</span></td>
+                        <td class="py-3 pr-6 text-right">${actions}</td>
+                    </tr>`;
+                }).join('');
+            }
+            
+            document.getElementById('paginationInfo').textContent = `Showing ${filteredEmployees.length ? start + 1 : 0}-${Math.min(end, filteredEmployees.length)} of ${filteredEmployees.length}`;
+            renderPagination(totalPages);
+        }
+        
+        function renderPagination(totalPages) {
+            let html = `<button class="w-8 h-8 rounded-lg border ${currentPage === 1 ? 'bg-gray-100 text-gray-400' : 'hover:bg-[#b0303b] hover:text-white'}" onclick="changePage(${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''}><i class="fa-solid fa-chevron-left text-xs"></i></button>`;
+            for (let i = 1; i <= totalPages; i++) {
+                if (i === 1 || i === totalPages || (i >= currentPage - 2 && i <= currentPage + 2)) {
+                    html += `<button class="w-8 h-8 rounded-lg ${i === currentPage ? 'bg-[#b0303b] text-white' : 'border hover:bg-[#d98989] hover:text-white'}" onclick="changePage(${i})">${i}</button>`;
+                } else if (i === currentPage - 3 || i === currentPage + 3) {
+                    html += `<span class="w-8 h-8 flex items-center justify-center">...</span>`;
+                }
+            }
+            html += `<button class="w-8 h-8 rounded-lg border ${currentPage === totalPages ? 'bg-gray-100 text-gray-400' : 'hover:bg-[#b0303b] hover:text-white'}" onclick="changePage(${currentPage + 1})" ${currentPage === totalPages ? 'disabled' : ''}><i class="fa-solid fa-chevron-right text-xs"></i></button>`;
+            document.getElementById('paginationControls').innerHTML = html;
+        }
+        
+        function changePage(page) {
+            const totalPages = Math.ceil(filteredEmployees.length / itemsPerPage);
+            if (page < 1 || page > totalPages) return;
+            currentPage = page;
+            renderTable();
+        }
+        
+        // Modal functions
+        window.openAddEmployeeModal = function() {
+            document.getElementById('addEmployeeModal').classList.remove('hidden');
+            document.getElementById('addEmployeeForm').reset();
+            toggleAssignmentFields();
+        };
+        
+        window.closeAddEmployeeModal = function() {
+            document.getElementById('addEmployeeModal').classList.add('hidden');
+        };
+        
+        window.toggleAssignmentFields = function() {
+            const type = document.getElementById('assignmentType').value;
+            document.getElementById('shsFields').style.display = 'none';
+            document.getElementById('collegeFields').style.display = 'none';
+            document.getElementById('adminFields').style.display = 'none';
+            document.getElementById('guardFields').style.display = 'none';
+            document.getElementById('saFields').style.display = 'none';
+            
+            if (type === 'shs_only' || type === 'both') document.getElementById('shsFields').style.display = 'block';
+            if (type === 'college_only' || type === 'both') document.getElementById('collegeFields').style.display = 'block';
+            if (type === 'admin') document.getElementById('adminFields').style.display = 'block';
+            if (type === 'guard') document.getElementById('guardFields').style.display = 'block';
+            if (type === 'sa') document.getElementById('saFields').style.display = 'block';
+        };
+        
+        // Add employee via API
+        document.getElementById('addEmployeeForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const type = document.getElementById('assignmentType').value;
+            const employee = {
+                full_name: document.getElementById('fullName').value,
+                email: document.getElementById('email').value,
+                phone: document.getElementById('phone').value,
+                birth_date: document.getElementById('birthDate').value,
+                position: document.getElementById('position')?.value || '',
+                department: document.getElementById('department')?.value || 'Academic',
+                employment_type: document.getElementById('employmentType')?.value || 'Regular',
+                hire_date: document.getElementById('hireDate').value,
+                status: document.getElementById('status')?.value || 'Active',
+                base_salary: parseFloat(document.getElementById('salary')?.value) || 0,
+                hourly_rate: parseFloat(document.getElementById('hourlyRate')?.value) || 0,
+                admin_pay_rate: parseFloat(document.getElementById('adminPayRate')?.value) || 0,
+                sss: document.getElementById('sss')?.value || '',
+                philhealth: document.getElementById('philhealth')?.value || '',
+                pagibig: document.getElementById('pagibig')?.value || '',
+                tin: document.getElementById('tin')?.value || '',
+                emergency_name: document.getElementById('emergencyName')?.value || '',
+                emergency_relation: document.getElementById('emergencyRelation')?.value || '',
+                emergency_phone: document.getElementById('emergencyPhone')?.value || '',
+                assignment: type
+            };
+            
+            if (type === 'shs_only' || type === 'both') {
+                employee.rate_shs = parseFloat(document.getElementById('shsRate')?.value) || 80;
+                employee.subjects_shs = document.getElementById('shsSubjects')?.value.split(',').map(s => s.trim()) || [];
+            }
+            if (type === 'college_only' || type === 'both') {
+                employee.rate_college = parseFloat(document.getElementById('collegeRate')?.value) || 85;
+                employee.subjects_college = document.getElementById('collegeSubjects')?.value.split(',').map(s => s.trim()) || [];
+            }
+            if (type === 'admin') {
+                employee.rate_admin = parseFloat(document.getElementById('adminRate')?.value) || 70;
+                employee.position = document.getElementById('adminPosition')?.value || 'Admin Staff';
+            }
+            if (type === 'guard') {
+                employee.rate_guard = parseFloat(document.getElementById('guardRate')?.value) || 433;
+                employee.position = 'Security Guard';
+            }
+            if (type === 'sa') {
+                employee.rate_sa = parseFloat(document.getElementById('saRate')?.value) || 100;
+                employee.position = 'Student Assistant';
+            }
+            
+            try {
+                const response = await fetch('/api/employees.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify(employee)
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Failed to add employee');
+                }
+                
+                const result = await response.json();
+                if (result.success) {
+                    alert('Employee added successfully!');
+                    closeAddEmployeeModal();
+                    await loadEmployees();
+                }
+            } catch (error) {
+                console.error('Error adding employee:', error);
+                alert('Error adding employee: ' + error.message);
+            }
+        });
+        
+        window.editEmployee = function(id) {
+            window.location.href = `edit-employee.html?id=${id}`;
+        };
+        
+        window.viewEmployee = function(id) {
+            window.location.href = `view-employee.html?id=${id}`;
+        };
+        
+        window.openArchiveModal = function(id, name) {
+            currentArchiveId = id;
+            document.getElementById('archiveEmployeeName').textContent = name;
+            document.getElementById('archiveModal').classList.remove('hidden');
+        };
+        
+        window.closeArchiveModal = function() {
+            document.getElementById('archiveModal').classList.add('hidden');
+            document.getElementById('archiveReason').value = '';
+            currentArchiveId = null;
+        };
+        
+        window.confirmArchive = async function() {
+            if (!currentArchiveId) return;
+            try {
+                const response = await fetch(`/api/employee.php?id=${currentArchiveId}`, {
+                    credentials: 'include'
+                });
+                const employee = await response.json();
+                
+                employee.status = 'Archived';
+                employee.archived_at = new Date().toISOString();
+                employee.archived_reason = document.getElementById('archiveReason').value;
+                
+                const updateResponse = await fetch('/api/employees.php', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify(employee)
+                });
+                
+                if (!updateResponse.ok) throw new Error('Failed to archive');
+                
+                alert('Employee archived successfully');
+                closeArchiveModal();
+                await loadEmployees();
+            } catch (error) {
+                console.error('Error archiving employee:', error);
+                alert('Error archiving employee');
+            }
+        };
+        
+        window.restoreEmployee = async function(id) {
+            if (!confirm('Restore this employee to active status?')) return;
+            try {
+                const response = await fetch(`/api/employee.php?id=${id}`, {
+                    credentials: 'include'
+                });
+                const employee = await response.json();
+                
+                employee.status = 'Active';
+                delete employee.archived_at;
+                delete employee.archived_reason;
+                
+                const updateResponse = await fetch('/api/employees.php', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify(employee)
+                });
+                
+                if (!updateResponse.ok) throw new Error('Failed to restore');
+                
+                alert('Employee restored successfully');
+                await loadEmployees();
+            } catch (error) {
+                console.error('Error restoring employee:', error);
+                alert('Error restoring employee');
+            }
+        };
+        
+        window.deleteEmployee = async function(id) {
+            if (!confirm('⚠️ WARNING: This will permanently delete this employee. This cannot be undone. Continue?')) return;
+            try {
+                const response = await fetch(`/api/employees.php?id=${id}`, {
+                    method: 'DELETE',
+                    credentials: 'include'
+                });
+                
+                if (!response.ok) throw new Error('Failed to delete');
+                
+                alert('Employee permanently deleted');
+                await loadEmployees();
+            } catch (error) {
+                console.error('Error deleting employee:', error);
+                alert('Error deleting employee');
+            }
+        };
+        
+        window.toggleArchiveView = function() {
+            showArchived = !showArchived;
+            const toggle = document.getElementById('archiveToggle');
+            const toggleText = toggle.querySelector('span');
+            if (showArchived) {
+                toggle.classList.add('active');
+                toggleText.textContent = 'Show Archived';
+                document.getElementById('statusFilter').value = 'Archived';
+            } else {
+                toggle.classList.remove('active');
+                toggleText.textContent = 'Show Active';
+                document.getElementById('statusFilter').value = 'all';
+            }
+            filterEmployees();
+        };
+        
+        window.clearFilters = function() {
+            document.getElementById('searchInput').value = '';
+            document.getElementById('typeFilter').value = 'all';
+            document.getElementById('statusFilter').value = 'all';
+            filterEmployees();
+        };
+        
+        function escapeHtml(str) {
+            if (!str) return '';
+            return str.replace(/[&<>]/g, m => m === '&' ? '&amp;' : m === '<' ? '&lt;' : m === '>' ? '&gt;' : m);
+        }
+        
+        window.logout = function() { localStorage.clear(); window.location.href = 'index.html'; };
+        
+        document.getElementById('currentDate').textContent = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+        document.getElementById('searchInput').addEventListener('input', filterEmployees);
+        document.getElementById('typeFilter').addEventListener('change', filterEmployees);
+        document.getElementById('statusFilter').addEventListener('change', filterEmployees);
+        
+        loadEmployees();
+        console.log("Employees page loaded - API integrated");
+    </script>
+</body>
+</html>

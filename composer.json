@@ -1,0 +1,8 @@
+{
+    "name": "philtech/payroll-system",
+    "description": "Philtech GMA Payroll System",
+    "type": "project",
+    "require": {
+        "php": ">=7.4"
+    }
+}

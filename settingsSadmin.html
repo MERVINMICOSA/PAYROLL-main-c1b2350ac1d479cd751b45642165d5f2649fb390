@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Philtech GMA | Superadmin Settings</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Security Scripts -->
+    <script src="js/csrf.js"></script>
+    <script src="js/xss-protection.js"></script>
+    <script src="js/secure-ajax.js"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #dcd3b8; }
+        .nav-link.active { background-color: #b0303b; color: white; }
+        
+        .profile-menu { position: absolute; right: 0; margin-top: 0.5rem; width: 14rem; background-color: white; border-radius: 0.75rem; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); padding: 0.5rem 0; z-index: 50; display: none; border: 1px solid #e5e7eb; }
+        .profile-menu.show { display: block; }
+        .profile-menu-item { padding: 0.75rem 1rem; transition: all 0.2s; cursor: pointer; display: flex; align-items: center; gap: 0.75rem; color: #374151; }
+        .profile-menu-item:hover { background-color: #f3f4f6; }
+        .profile-menu-item.logout:hover { background-color: #fee2e2; color: #dc2626; }
+        
+        .settings-card { background: white; border-radius: 1.5rem; padding: 2rem; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); max-width: 800px; margin: 0 auto; }
+        .settings-header { display: flex; align-items: center; gap: 1rem; margin-bottom: 2rem; padding-bottom: 1rem; border-bottom: 1px solid #e5e7eb; }
+        .settings-header i { font-size: 2rem; color: #b0303b; background: rgba(176, 48, 59, 0.1); padding: 1rem; border-radius: 50%; }
+        .settings-header h2 { font-size: 1.5rem; font-weight: 600; color: #1f2937; }
+        .settings-header p { color: #6b7280; font-size: 0.875rem; }
+        
+        .info-item { display: flex; justify-content: space-between; align-items: center; padding: 1rem 0; border-bottom: 1px solid #f3f4f6; }
+        .info-label { color: #6b7280; font-size: 0.95rem; }
+        .info-value { font-weight: 500; color: #1f2937; }
+        
+        .logout-button { background-color: #fee2e2; color: #dc2626; border: none; padding: 0.75rem 1.5rem; border-radius: 0.75rem; font-weight: 500; cursor: pointer; transition: all 0.3s; display: flex; align-items: center; gap: 0.75rem; width: 100%; justify-content: center; margin-top: 1.5rem; }
+        .logout-button:hover { background-color: #fecaca; transform: translateY(-2px); box-shadow: 0 4px 8px rgba(220, 38, 38, 0.2); }
+        
+        .settings-tab { padding: 0.75rem 1.5rem; border-radius: 50px; font-weight: 500; cursor: pointer; transition: all 0.3s; background-color: white; border: 1px solid #e5e7eb; }
+        .settings-tab:hover { background-color: #f3f4f6; }
+        .settings-tab.active { background-color: #b0303b; color: white; border-color: #b0303b; }
+        
+        .sys-info-card { background-color: #f9fafb; border-radius: 12px; padding: 1.5rem; border: 1px solid #e5e7eb; }
+        
+        .modal { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000; }
+        .modal-content { background: white; border-radius: 16px; padding: 24px; max-width: 400px; width: 90%; }
+    </style>
+</head>
+<body class="text-gray-700 antialiased min-h-screen">
+
+    <nav class="bg-[#8a1f27] text-white px-6 py-3 flex justify-between items-center sticky top-0 z-50 shadow-md">
+        <div class="flex items-center gap-2"><div class="w-8 h-8 bg-[#b0303b] rounded-lg flex items-center justify-center"><i class="fa-solid fa-gear text-[#f4e8c1]"></i></div><span class="font-bold text-lg">Philtech GMA - Superadmin</span></div>
+        <div class="hidden md:flex items-center gap-1"><a href="dashboardSadmin.html" class="nav-link px-4 py-2 rounded-lg hover:bg-[#d98989] transition-colors font-medium">Dashboard</a><a href="employeesSadmin.html" class="nav-link px-4 py-2 rounded-lg hover:bg-[#d98989] transition-colors font-medium">Employees</a><a href="payrollSadmin.html" class="nav-link px-4 py-2 rounded-lg hover:bg-[#d98989] transition-colors font-medium">Payroll</a><a href="user-mgmt.html" class="nav-link px-4 py-2 rounded-lg hover:bg-[#d98989] transition-colors font-medium">Users</a><a href="settingsSadmin.html" class="nav-link active px-4 py-2 rounded-lg bg-[#b0303b] text-white font-medium">Settings</a></div>
+        <div class="flex items-center gap-3 relative" id="profileContainer"><span class="text-sm hidden sm:block" id="userName">Superadmin</span><div class="relative"><img src="https://i.pravatar.cc/150?u=superadmin" class="w-8 h-8 rounded-full border-2 border-white cursor-pointer hover:opacity-90 transition-opacity" id="profileImage" onclick="toggleProfileMenu()"><div class="profile-menu" id="profileMenu"><div class="profile-menu-item" onclick="viewProfile()"><i class="fa-regular fa-user w-5"></i><span>My Profile</span></div><div class="profile-menu-item" onclick="changePassword()"><i class="fa-solid fa-key w-5"></i><span>Change Password</span></div><div class="profile-menu-item" onclick="viewActivity()"><i class="fa-regular fa-clock w-5"></i><span>Login Activity</span></div><div class="profile-menu-item" onclick="viewAuditLog()"><i class="fa-regular fa-file-lines w-5"></i><span>Audit Log</span></div><hr class="my-1 border-gray-100"><div class="profile-menu-item logout" onclick="logout()"><i class="fa-solid fa-sign-out-alt w-5"></i><span>Logout</span></div></div></div></div>
+    </nav>
+
+    <main class="p-6 md:p-8 max-w-5xl mx-auto">
+        <div class="mb-8"><h1 class="text-2xl font-bold text-[#8a1f27]">System Settings</h1><p class="text-gray-500 text-sm mt-1" id="currentDate"></p></div>
+        <div class="flex flex-wrap gap-2 mb-6"><button class="settings-tab active" onclick="switchTab('profile')">Profile</button><button class="settings-tab" onclick="switchTab('system')">System Info</button><button class="settings-tab" onclick="switchTab('activity')">Activity</button><button class="settings-tab" onclick="switchTab('backup')">Backup</button></div>
+
+        <div id="profileTab" class="settings-card"><div class="settings-header"><i class="fa-regular fa-user-circle"></i><div><h2>Profile Information</h2><p>Manage your account details</p></div></div><div class="space-y-2"><div class="info-item"><span class="info-label"><i class="fa-regular fa-user mr-2 text-gray-400"></i>Full Name</span><span class="info-value" id="displayFullName">Loading...</span></div><div class="info-item"><span class="info-label"><i class="fa-regular fa-id-card mr-2 text-gray-400"></i>Username</span><span class="info-value" id="displayUsername">superadmin</span></div><div class="info-item"><span class="info-label"><i class="fa-regular fa-envelope mr-2 text-gray-400"></i>Email</span><span class="info-value" id="displayEmail">superadmin@philtech.edu</span></div><div class="info-item"><span class="info-label"><i class="fa-regular fa-building mr-2 text-gray-400"></i>Role</span><span class="info-value" id="displayRole">Super Administrator</span></div><div class="info-item"><span class="info-label"><i class="fa-regular fa-calendar mr-2 text-gray-400"></i>Member Since</span><span class="info-value" id="memberSince">January 2026</span></div><div class="info-item"><span class="info-label"><i class="fa-regular fa-clock mr-2 text-gray-400"></i>Last Login</span><span class="info-value" id="lastLogin">Just now</span></div></div><div class="grid grid-cols-2 gap-3 mt-6"><button onclick="changePassword()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 py-3 rounded-lg transition-colors flex items-center justify-center gap-2"><i class="fa-solid fa-key"></i> Change Password</button><button onclick="viewActivity()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 py-3 rounded-lg transition-colors flex items-center justify-center gap-2"><i class="fa-regular fa-clock"></i> Activity Log</button></div><button onclick="logout()" class="logout-button mt-6"><i class="fa-solid fa-sign-out-alt"></i> Sign Out</button></div>
+
+        <div id="systemTab" class="settings-card hidden"><div class="settings-header"><i class="fa-solid fa-server"></i><div><h2>System Information</h2><p>Technical details and version info</p></div></div><div class="sys-info-card mb-4"><h3 class="font-semibold text-gray-800 mb-3">Application</h3><div class="space-y-2"><div class="flex justify-between"><span class="text-gray-500">Version</span><span class="font-medium">v2.0.0 (Excel Mode)</span></div><div class="flex justify-between"><span class="text-gray-500">Environment</span><span class="font-medium">Production</span></div><div class="flex justify-between"><span class="text-gray-500">Last Updated</span><span class="font-medium">March 2026</span></div><div class="flex justify-between"><span class="text-gray-500">Database</span><span class="font-medium">IndexedDB (Local)</span></div></div></div><div class="sys-info-card"><h3 class="font-semibold text-gray-800 mb-3">Statistics</h3><div class="space-y-2"><div class="flex justify-between"><span class="text-gray-500">Total Users</span><span class="font-medium" id="statUsers">0</span></div><div class="flex justify-between"><span class="text-gray-500">Total Employees</span><span class="font-medium" id="statEmployees">0</span></div><div class="flex justify-between"><span class="text-gray-500">Payroll Records</span><span class="font-medium" id="statPayroll">0</span></div><div class="flex justify-between"><span class="text-gray-500">Attendance Records</span><span class="font-medium" id="statAttendance">0</span></div></div></div></div>
+
+        <div id="activityTab" class="settings-card hidden"><div class="settings-header"><i class="fa-regular fa-clock"></i><div><h2>Recent Activity</h2><p>Your recent actions in the system</p></div></div><div class="space-y-4" id="activityLog"><div class="flex items-center gap-3 p-3 bg-gray-50 rounded-lg"><div class="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center text-green-600"><i class="fa-solid fa-check"></i></div><div class="flex-1"><p class="text-sm font-medium text-gray-800">Approved payroll for current period</p><p class="text-xs text-gray-500">Today at 10:30 AM</p></div></div><div class="flex items-center gap-3 p-3 bg-gray-50 rounded-lg"><div class="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center text-blue-600"><i class="fa-regular fa-user"></i></div><div class="flex-1"><p class="text-sm font-medium text-gray-800">Created new user</p><p class="text-xs text-gray-500">Yesterday at 3:45 PM</p></div></div><div class="flex items-center gap-3 p-3 bg-gray-50 rounded-lg"><div class="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center text-green-600"><i class="fa-solid fa-check"></i></div><div class="flex-1"><p class="text-sm font-medium text-gray-800">Successful login</p><p class="text-xs text-gray-500">Yesterday at 9:15 AM</p></div></div></div></div>
+
+        <div id="backupTab" class="settings-card hidden"><div class="settings-header"><i class="fa-solid fa-database"></i><div><h2>Backup & Restore</h2><p>Manage system backups</p></div></div><div class="space-y-4"><div class="bg-gray-50 p-4 rounded-lg"><h3 class="font-medium text-gray-800 mb-3">Manual Backup</h3><button onclick="createBackup()" class="bg-[#b0303b] text-white px-4 py-2 rounded-lg hover:bg-[#8a1f27] transition-colors"><i class="fa-solid fa-download mr-2"></i>Download Backup</button></div><div class="bg-gray-50 p-4 rounded-lg"><h3 class="font-medium text-gray-800 mb-3">Restore from Backup</h3><div class="mb-3"><input type="file" id="backupFile" accept=".json" class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-[#b0303b] file:text-white hover:file:bg-[#8a1f27]"></div><button onclick="restoreBackup()" class="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition-colors">Restore from File</button></div></div></div>
+
+        <div class="mt-6 text-center text-xs text-gray-400"><p>© 2026 Philtech GMA. All rights reserved.</p><p class="mt-1">Excel-style Attendance System v2.0</p></div>
+    </main>
+
+    <div id="passwordModal" class="fixed inset-0 bg-black/50 flex items-center justify-center hidden z-50"><div class="bg-white rounded-2xl max-w-md w-full mx-4"><div class="p-6 border-b border-gray-100"><h3 class="text-xl font-bold text-[#8a1f27]">Change Password</h3></div><div class="p-6"><div class="space-y-4"><div><label class="block text-sm font-medium text-gray-700 mb-2">Current Password</label><input type="password" id="currentPassword" class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#b0303b] focus:border-transparent"></div><div><label class="block text-sm font-medium text-gray-700 mb-2">New Password</label><input type="password" id="newPassword" class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#b0303b] focus:border-transparent"><p class="text-xs text-gray-400 mt-1">Minimum 6 characters</p></div><div><label class="block text-sm font-medium text-gray-700 mb-2">Confirm New Password</label><input type="password" id="confirmPassword" class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#b0303b] focus:border-transparent"></div></div></div><div class="p-6 border-t border-gray-100 flex justify-end gap-3"><button onclick="closePasswordModal()" class="px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">Cancel</button><button onclick="updatePassword()" class="px-4 py-2 bg-[#b0303b] text-white rounded-lg hover:bg-[#8a1f27] transition-colors">Update Password</button></div></div></div>
+
+    <div id="auditModal" class="fixed inset-0 bg-black/50 flex items-center justify-center hidden z-50"><div class="bg-white rounded-2xl max-w-3xl w-full mx-4 max-h-[80vh] overflow-y-auto"><div class="p-6 border-b border-gray-100 flex justify-between items-center sticky top-0 bg-white"><h3 class="text-xl font-bold text-[#8a1f27]">System Audit Log</h3><button onclick="closeAuditModal()" class="text-gray-400 hover:text-gray-600"><i class="fa-solid fa-xmark text-2xl"></i></button></div><div class="p-6"><div class="space-y-4"><div class="flex items-center gap-3 p-3 bg-gray-50 rounded-lg"><div class="flex-1"><p class="text-sm font-medium text-gray-800">superadmin approved payroll</p><p class="text-xs text-gray-500">Today at 10:30 AM</p></div><span class="text-xs bg-blue-100 text-blue-600 px-2 py-1 rounded">Payroll</span></div><div class="flex items-center gap-3 p-3 bg-gray-50 rounded-lg"><div class="flex-1"><p class="text-sm font-medium text-gray-800">accountant created new employee</p><p class="text-xs text-gray-500">Yesterday at 3:45 PM</p></div><span class="text-xs bg-green-100 text-green-600 px-2 py-1 rounded">Employee</span></div></div></div><div class="p-6 border-t border-gray-100"><button onclick="closeAuditModal()" class="w-full bg-gray-100 py-2 rounded-lg hover:bg-gray-200 transition-colors">Close</button></div></div></div>
+
+    <script src="js/api-integration.js"></script>
+    <script src="js/database.js"></script>
+    <script src="js/navigation.js"></script>
+    <script>
+// Direct API calls (like accountant pages)
+        async function loadUsersFromAPI() {
+            try {
+                const response = await fetch('/api/users.php', { credentials: 'include' });
+                if (!response.ok) return [];
+                return await response.json();
+            } catch (error) {
+                console.error("Error loading users:", error);
+                return [];
+            }
+        }
+
+        async function loadEmployeesFromAPI() {
+            try {
+                const response = await fetch('/api/employees.php', { credentials: 'include' });
+                if (!response.ok) return [];
+                return await response.json();
+            } catch (error) {
+                console.error("Error loading employees:", error);
+                return [];
+            }
+        }
+
+        async function loadPayrollFromAPI() {
+            try {
+                const response = await fetch('/api/payroll.php', { credentials: 'include' });
+                if (!response.ok) return [];
+                return await response.json();
+            } catch (error) {
+                console.error("Error loading payroll:", error);
+                return [];
+            }
+        }
+
+        async function loadAttendanceFromAPI() {
+            try {
+                const response = await fetch('/api/attendance/admin-master', { credentials: 'include' });
+                if (!response.ok) return [];
+                return await response.json();
+            } catch (error) {
+                console.error("Error loading attendance:", error);
+                return [];
+            }
+        }
+
+        async function updateUserAPI(id, data) {
+            try {
+                const response = await fetch('/api/users.php', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ id, ...data })
+                });
+                return response.ok;
+            } catch (error) {
+                console.error("Error updating user:", error);
+                return false;
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('currentDate').textContent = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+            loadUserInfo();
+            loadSystemStats();
+            document.addEventListener('click', function(event) {
+                const profileContainer = document.getElementById('profileContainer');
+                const profileMenu = document.getElementById('profileMenu');
+                if (profileContainer && profileMenu && !profileContainer.contains(event.target) && profileMenu.classList.contains('show')) {
+                    profileMenu.classList.remove('show');
+                }
+            });
+        });
+
+        function loadUserInfo() {
+            const user = JSON.parse(localStorage.getItem('user') || '{}');
+            document.getElementById('userName').textContent = user.full_name || 'Superadmin';
+            document.getElementById('displayFullName').textContent = user.full_name || 'Super Administrator';
+            document.getElementById('displayUsername').textContent = user.username || 'superadmin';
+            document.getElementById('displayEmail').textContent = user.email || 'superadmin@philtech.edu';
+            document.getElementById('displayRole').textContent = 'Super Administrator';
+            const lastLogin = localStorage.getItem('lastLogin');
+            if (lastLogin) { document.getElementById('lastLogin').textContent = new Date(lastLogin).toLocaleString(); }
+            const memberSince = user.created_at ? new Date(user.created_at).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : 'January 2026';
+            document.getElementById('memberSince').textContent = memberSince;
+        }
+
+        async function loadSystemStats() {
+            try {
+                const users = await loadUsersFromAPI();
+                const employees = await loadEmployeesFromAPI();
+                const payroll = await loadPayrollFromAPI();
+                const attendance = await loadAttendanceFromAPI();
+                document.getElementById('statUsers').textContent = users.length;
+                document.getElementById('statEmployees').textContent = employees.length;
+                document.getElementById('statPayroll').textContent = payroll.length;
+                document.getElementById('statAttendance').textContent = attendance.length;
+            } catch (error) { console.error('Error loading stats:', error); }
+        }
+
+        function switchTab(tab) {
+            document.querySelectorAll('.settings-tab').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            document.getElementById('profileTab').classList.add('hidden');
+            document.getElementById('systemTab').classList.add('hidden');
+            document.getElementById('activityTab').classList.add('hidden');
+            document.getElementById('backupTab').classList.add('hidden');
+            document.getElementById(tab + 'Tab').classList.remove('hidden');
+        }
+        
+        function toggleProfileMenu() { const menu = document.getElementById('profileMenu'); if (menu) menu.classList.toggle('show'); }
+        function viewProfile() { switchTab('profile'); const menu = document.getElementById('profileMenu'); if (menu) menu.classList.remove('show'); }
+        function changePassword() { document.getElementById('passwordModal').classList.remove('hidden'); const menu = document.getElementById('profileMenu'); if (menu) menu.classList.remove('show'); }
+        function viewActivity() { switchTab('activity'); const menu = document.getElementById('profileMenu'); if (menu) menu.classList.remove('show'); }
+        function viewAuditLog() { document.getElementById('auditModal').classList.remove('hidden'); const menu = document.getElementById('profileMenu'); if (menu) menu.classList.remove('show'); }
+        function closePasswordModal() { document.getElementById('passwordModal').classList.add('hidden'); }
+        function closeAuditModal() { document.getElementById('auditModal').classList.add('hidden'); }
+        
+async function updatePassword() {
+            const current = document.getElementById('currentPassword').value, newPass = document.getElementById('newPassword').value, confirm = document.getElementById('confirmPassword').value;
+            if (!current || !newPass || !confirm) { alert('Please fill in all fields'); return; }
+            if (newPass !== confirm) { alert('New passwords do not match'); return; }
+            if (newPass.length < 6) { alert('Password must be at least 6 characters'); return; }
+            try {
+                const user = JSON.parse(localStorage.getItem('user') || '{}');
+                const users = await loadUsersFromAPI();
+                const currentUser = users.find(u => u.username === user.username);
+                if (!currentUser) { alert('User not found'); return; }
+                if (current !== currentUser.password) { alert('Current password is incorrect'); return; }
+                const success = await updateUserAPI(currentUser.id, { password: newPass });
+                if (success) {
+                    alert('Password updated successfully!');
+                    closePasswordModal();
+                } else {
+                    throw new Error('Failed to update');
+                }
+            } catch (error) { console.error('Error updating password:', error); alert('Error updating password. Please try again.'); }
+        }
+        
+        async function createBackup() {
+            try {
+                const users = await loadUsersFromAPI();
+                const employees = await loadEmployeesFromAPI();
+                const payroll = await loadPayrollFromAPI();
+                const attendance = await loadAttendanceFromAPI();
+                const backup = { timestamp: new Date().toISOString(), version: '2.0.0', data: { users, employees, payroll, attendance } };
+                const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `philtech_backup_${new Date().toISOString().split('T')[0]}.json`;
+                a.click();
+                URL.revokeObjectURL(url);
+                alert('Backup downloaded successfully!');
+            } catch (error) { console.error('Error creating backup:', error); alert('Error creating backup'); }
+        }
+        
+        async function restoreBackup() {
+            const file = document.getElementById('backupFile').files[0];
+            if (!file) { alert('Please select a backup file'); return; }
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+                try {
+                    const backup = JSON.parse(e.target.result);
+                    if (!confirm('Restoring will overwrite existing data. Continue?')) return;
+                    alert('Restore functionality - would restore data from backup');
+                } catch (error) { alert('Invalid backup file'); }
+            };
+            reader.readAsText(file);
+        }
+        
+        async function logout() {
+            if (confirm('Are you sure you want to logout?')) {
+                try {
+                    await fetch('/api/auth/logout.php', { method: 'POST', credentials: 'include' });
+                } catch (e) { console.error('Logout error:', e); }
+                localStorage.clear();
+                window.location.href = 'index.html';
+            }
+        }
+    </script>
+</body>
+</html>

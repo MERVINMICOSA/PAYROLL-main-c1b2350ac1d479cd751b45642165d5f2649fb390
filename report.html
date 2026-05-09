@@ -1,0 +1,716 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Philtech GMA | Reports</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <!-- Security Scripts -->
+    <script src="js/csrf.js"></script>
+    <script src="js/xss-protection.js"></script>
+    <script src="js/secure-ajax.js"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #dcd3b8; }
+        .nav-link.active { background-color: #b0303b; color: white; }
+        .report-card { transition: all 0.3s ease; }
+        .report-card:hover { transform: translateY(-5px); box-shadow: 0 10px 25px -5px rgba(176, 48, 59, 0.2); }
+        
+        .report-container {
+            background: white;
+            border-radius: 1rem;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        
+        .report-header {
+            border-bottom: 2px solid #b0303b;
+            padding-bottom: 0.75rem;
+            margin-bottom: 1.25rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .report-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: #8a1f27;
+        }
+        
+        .export-buttons {
+            display: flex;
+            gap: 0.5rem;
+        }
+        
+        .export-btn {
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            font-size: 0.875rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: none;
+        }
+        
+        .export-excel {
+            background-color: #10b981;
+            color: white;
+        }
+        .export-excel:hover { background-color: #059669; }
+        
+        .export-pdf {
+            background-color: #ef4444;
+            color: white;
+        }
+        .export-pdf:hover { background-color: #dc2626; }
+        
+        .report-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.875rem;
+        }
+        
+        .report-table th {
+            background-color: #f9fafb;
+            padding: 0.75rem;
+            text-align: left;
+            border-bottom: 2px solid #e5e7eb;
+            font-weight: 600;
+            color: #374151;
+        }
+        
+        .report-table td {
+            padding: 0.75rem;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        
+        .report-table tr:hover {
+            background-color: #f9fafb;
+        }
+        
+        .summary-card {
+            background: linear-gradient(135deg, #b0303b 0%, #8a1f27 100%);
+            color: white;
+            border-radius: 1rem;
+            padding: 1.25rem;
+        }
+        
+        .filter-bar {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            margin-bottom: 1.5rem;
+            padding: 1rem;
+            background: white;
+            border-radius: 0.75rem;
+            align-items: flex-end;
+        }
+        
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .filter-group label {
+            font-size: 0.75rem;
+            font-weight: 500;
+            color: #6b7280;
+            margin-bottom: 0.25rem;
+        }
+        
+        .filter-group select, .filter-group input {
+            padding: 0.5rem 0.75rem;
+            border: 1px solid #e5e7eb;
+            border-radius: 0.5rem;
+            font-size: 0.875rem;
+        }
+        
+        .btn-primary {
+            background-color: #b0303b;
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            font-size: 0.875rem;
+            font-weight: 500;
+            cursor: pointer;
+            border: none;
+        }
+        .btn-primary:hover { background-color: #8a1f27; }
+        
+        .btn-secondary {
+            background-color: #6b7280;
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            font-size: 0.875rem;
+            font-weight: 500;
+            cursor: pointer;
+            border: none;
+        }
+        .btn-secondary:hover { background-color: #4b5563; }
+        
+        .tab-button {
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            font-size: 0.875rem;
+            font-weight: 500;
+            cursor: pointer;
+            background: #f3f4f6;
+            border: none;
+            transition: all 0.2s;
+        }
+        .tab-button.active {
+            background-color: #b0303b;
+            color: white;
+        }
+        
+        .stat-number {
+            font-size: 1.5rem;
+            font-weight: 700;
+        }
+        
+        @media print {
+            body { background-color: white; }
+            .no-print { display: none !important; }
+            .report-container { box-shadow: none; border: 1px solid #e5e7eb; }
+        }
+    </style>
+</head>
+<body class="text-gray-700 antialiased min-h-screen">
+
+    <nav class="bg-[#8a1f27] text-white px-6 py-3 flex justify-between items-center sticky top-0 z-50 shadow-md no-print">
+        <div class="flex items-center gap-2">
+            <div class="w-8 h-8 bg-[#b0303b] rounded-lg flex items-center justify-center">
+                <i class="fa-solid fa-chart-line text-[#f4e8c1]"></i>
+            </div>
+            <span class="font-bold text-lg">Philtech GMA</span>
+        </div>
+        
+        <div class="hidden md:flex items-center gap-1">
+            <a href="dashboardSadmin.html" class="nav-link px-4 py-2 rounded-lg hover:bg-[#d98989] transition-colors font-medium">Dashboard</a>
+            <a href="employeesSadmin.html" class="nav-link px-4 py-2 rounded-lg hover:bg-[#d98989] transition-colors font-medium">Employees</a>
+            <a href="payrollSadmin.html" class="nav-link px-4 py-2 rounded-lg hover:bg-[#d98989] transition-colors font-medium">Payroll</a>
+            <a href="attendanceSadmin.html" class="nav-link px-4 py-2 rounded-lg hover:bg-[#d98989] transition-colors font-medium">Attendance</a>
+            <a href="report.html" class="nav-link active px-4 py-2 rounded-lg bg-[#b0303b] text-white font-medium">Reports</a>
+            <a href="user-mgmt.html" class="nav-link px-4 py-2 rounded-lg hover:bg-[#d98989] transition-colors font-medium">Users</a>
+            <a href="settingsSadmin.html" class="nav-link px-4 py-2 rounded-lg hover:bg-[#d98989] transition-colors font-medium">Settings</a>
+        </div>
+        
+        <div class="flex items-center gap-3">
+            <span class="text-sm hidden sm:block" id="userName">Superadmin</span>
+            <div class="relative group">
+                <img src="https://i.pravatar.cc/150?u=superadmin" class="w-8 h-8 rounded-full border-2 border-white cursor-pointer">
+                <div class="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg py-1 hidden group-hover:block z-50">
+                    <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Profile</a>
+                    <a href="#" onclick="logout()" class="block px-4 py-2 text-sm text-red-600 hover:bg-gray-100">Logout</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="p-6 md:p-8 max-w-7xl mx-auto">
+        
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4 no-print">
+            <div>
+                <h1 class="text-2xl font-bold text-[#8a1f27]">Reports</h1>
+                <p class="text-gray-500 text-sm mt-1" id="currentDate"></p>
+            </div>
+        </div>
+
+        <!-- Report Type Tabs -->
+        <div class="flex flex-wrap gap-2 mb-6 no-print">
+            <button class="tab-button active" onclick="switchReportType('monthly')">Monthly Payroll</button>
+            <button class="tab-button" onclick="switchReportType('employee')">Employee Salary</button>
+            <button class="tab-button" onclick="switchReportType('deduction')">Deduction Summary</button>
+            <button class="tab-button" onclick="switchReportType('attendance')">Attendance Report</button>
+        </div>
+
+        <!-- Filter Bar -->
+        <div class="filter-bar no-print" id="filterBar">
+            <div class="filter-group">
+                <label>Year</label>
+                <select id="yearFilter">
+                    <option value="2026">2026</option>
+                    <option value="2025">2025</option>
+                    <option value="2024">2024</option>
+                </select>
+            </div>
+            <div class="filter-group" id="monthFilterGroup">
+                <label>Month</label>
+                <select id="monthFilter">
+                    <option value="all">All Months</option>
+                    <option value="January">January</option>
+                    <option value="February">February</option>
+                    <option value="March">March</option>
+                    <option value="April">April</option>
+                    <option value="May">May</option>
+                    <option value="June">June</option>
+                    <option value="July">July</option>
+                    <option value="August">August</option>
+                    <option value="September">September</option>
+                    <option value="October">October</option>
+                    <option value="November">November</option>
+                    <option value="December">December</option>
+                </select>
+            </div>
+            <div class="filter-group" id="employeeFilterGroup" style="display: none;">
+                <label>Employee</label>
+                <select id="employeeFilter">
+                    <option value="all">All Employees</option>
+                </select>
+            </div>
+            <button class="btn-primary" onclick="refreshReport()">Generate Report</button>
+            <button class="btn-secondary" onclick="resetFilters()">Reset</button>
+        </div>
+
+        <!-- Summary Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6" id="summaryCards">
+            <div class="summary-card">
+                <p class="text-white/80 text-sm">Total Employees</p>
+                <p class="stat-number" id="summaryTotalEmployees">0</p>
+            </div>
+            <div class="summary-card">
+                <p class="text-white/80 text-sm">Total Gross Pay</p>
+                <p class="stat-number" id="summaryTotalGross">₱0</p>
+            </div>
+            <div class="summary-card">
+                <p class="text-white/80 text-sm">Total Deductions</p>
+                <p class="stat-number" id="summaryTotalDeductions">₱0</p>
+            </div>
+            <div class="summary-card">
+                <p class="text-white/80 text-sm">Total Net Pay</p>
+                <p class="stat-number" id="summaryTotalNet">₱0</p>
+            </div>
+        </div>
+
+        <!-- Report Content -->
+        <div class="report-container" id="reportContainer">
+            <div class="report-header">
+                <h2 class="report-title" id="reportTitle">Monthly Payroll Report</h2>
+                <div class="export-buttons no-print">
+                    <button class="export-btn export-excel" onclick="exportToExcel()"><i class="fa-solid fa-file-excel mr-1"></i>Export Excel</button>
+                    <button class="export-btn export-pdf" onclick="exportToPDF()"><i class="fa-solid fa-file-pdf mr-1"></i>Export PDF</button>
+                </div>
+            </div>
+            <div id="reportTableContainer">
+                <div class="text-center py-8 text-gray-400">Loading report data...</div>
+            </div>
+        </div>
+    </main>
+
+    <script src="js/database.js"></script>
+    <script src="js/navigation.js"></script>
+    <script>
+        let allPayroll = [];
+        let allEmployees = [];
+        let allAttendance = [];
+        let currentReportType = 'monthly';
+        let currentFilters = { year: '2026', month: 'all', employee: 'all' };
+
+        function waitForDatabase(callback, retries = 15) {
+            if (typeof Database !== 'undefined' && Database.ensureDatabaseReady) {
+                Database.ensureDatabaseReady().then(callback).catch(() => {
+                    if (retries > 0) setTimeout(() => waitForDatabase(callback, retries - 1), 200);
+                });
+            } else if (retries > 0) {
+                setTimeout(() => waitForDatabase(callback, retries - 1), 200);
+            } else {
+                document.getElementById('reportTableContainer').innerHTML = '<div class="text-center text-red-500 py-8">Database not loaded. Please refresh.</div>';
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('currentDate').textContent = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+            
+            waitForDatabase(async function() {
+                try {
+                    await Database.ensureDatabaseReady();
+                    await loadData();
+                    await populateEmployeeFilter();
+                    await refreshReport();
+                } catch (error) {
+                    console.error('Error initializing reports:', error);
+                }
+            });
+        });
+
+        async function loadData() {
+            allPayroll = await Database.getAllPayroll();
+            allEmployees = await Database.getAllEmployees();
+            allAttendance = await Database.getAllAttendance();
+        }
+
+        async function populateEmployeeFilter() {
+            const select = document.getElementById('employeeFilter');
+            if (!select) return;
+            
+            select.innerHTML = '<option value="all">All Employees</option>';
+            allEmployees.forEach(emp => {
+                select.innerHTML += `<option value="${emp.id}">${escapeHtml(emp.full_name)}</option>`;
+            });
+        }
+
+        function switchReportType(type) {
+            currentReportType = type;
+            
+            document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            const monthFilterGroup = document.getElementById('monthFilterGroup');
+            const employeeFilterGroup = document.getElementById('employeeFilterGroup');
+            
+            if (type === 'employee') {
+                monthFilterGroup.style.display = 'flex';
+                employeeFilterGroup.style.display = 'flex';
+                document.getElementById('reportTitle').textContent = 'Employee Salary Report';
+            } else if (type === 'deduction') {
+                monthFilterGroup.style.display = 'flex';
+                employeeFilterGroup.style.display = 'none';
+                document.getElementById('reportTitle').textContent = 'Deduction Summary';
+            } else if (type === 'attendance') {
+                monthFilterGroup.style.display = 'flex';
+                employeeFilterGroup.style.display = 'none';
+                document.getElementById('reportTitle').textContent = 'Attendance Report';
+            } else {
+                monthFilterGroup.style.display = 'flex';
+                employeeFilterGroup.style.display = 'none';
+                document.getElementById('reportTitle').textContent = 'Monthly Payroll Report';
+            }
+            
+            refreshReport();
+        }
+
+        function resetFilters() {
+            document.getElementById('yearFilter').value = '2026';
+            document.getElementById('monthFilter').value = 'all';
+            document.getElementById('employeeFilter').value = 'all';
+            currentFilters = { year: '2026', month: 'all', employee: 'all' };
+            refreshReport();
+        }
+
+        function refreshReport() {
+            currentFilters = {
+                year: document.getElementById('yearFilter').value,
+                month: document.getElementById('monthFilter').value,
+                employee: document.getElementById('employeeFilter').value
+            };
+            
+            switch(currentReportType) {
+                case 'monthly':
+                    generateMonthlyReport();
+                    break;
+                case 'employee':
+                    generateEmployeeReport();
+                    break;
+                case 'deduction':
+                    generateDeductionReport();
+                    break;
+                case 'attendance':
+                    generateAttendanceReport();
+                    break;
+            }
+        }
+
+        function generateMonthlyReport() {
+            const year = currentFilters.year;
+            const monthFilter = currentFilters.month;
+            
+            let filteredPayroll = allPayroll.filter(p => p.period && p.period.includes(year));
+            
+            if (monthFilter !== 'all') {
+                filteredPayroll = filteredPayroll.filter(p => p.period.includes(monthFilter));
+            }
+            
+            const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+            const monthlyData = [];
+            
+            for (const month of monthNames) {
+                const monthPayroll = filteredPayroll.filter(p => p.period.includes(month));
+            const totalGross = monthPayroll.reduce((sum, p) => sum + parseFloat(p.gross_salary || 0), 0);
+                const totalDeductions = monthPayroll.reduce((sum, p) => sum + parseFloat(p.total_deduction || 0), 0);
+                const totalNet = monthPayroll.reduce((sum, p) => sum + parseFloat(p.net_salary || 0), 0);
+                const employeeCount = new Set(monthPayroll.map(p => p.employee_id)).size;
+                
+                monthlyData.push({ month, totalGross, totalDeductions, totalNet, employeeCount });
+            }
+            
+            const totalGross = monthlyData.reduce((sum, d) => sum + d.totalGross, 0);
+            const totalDeductions = monthlyData.reduce((sum, d) => sum + d.totalDeductions, 0);
+            const totalNet = monthlyData.reduce((sum, d) => sum + d.totalNet, 0);
+            const totalEmployees = new Set(allPayroll.filter(p => p.period && p.period.includes(year)).map(p => p.employee_id)).size;
+            
+            document.getElementById('summaryTotalEmployees').textContent = totalEmployees;
+            document.getElementById('summaryTotalGross').textContent = '₱' + totalGross.toLocaleString();
+            document.getElementById('summaryTotalDeductions').textContent = '₱' + totalDeductions.toLocaleString();
+            document.getElementById('summaryTotalNet').textContent = '₱' + totalNet.toLocaleString();
+            
+            let html = '<table class="report-table"><thead><tr>';
+            html += '<th>Month</th><th>Employees</th><th>Gross Payroll</th><th>Total Deductions</th><th>Net Payroll</th>';
+            html += '</tr></thead><tbody>';
+            
+            monthlyData.forEach(data => {
+                if (data.totalGross === 0 && data.totalDeductions === 0 && data.totalNet === 0) return;
+                html += `<tr>
+                    <td>${data.month} ${currentFilters.year}</td>
+                    <td>${data.employeeCount}</td>
+                    <td>₱${data.totalGross.toLocaleString()}</td>
+                    <td>₱${data.totalDeductions.toLocaleString()}</td>
+                    <td class="font-medium text-[#b0303b]">₱${data.totalNet.toLocaleString()}</td>
+                </tr>`;
+            });
+            
+            if (monthlyData.every(d => d.totalGross === 0)) {
+                html += '<tr><td colspan="5" class="text-center py-8 text-gray-400">No payroll data found for selected period</td></tr>';
+            }
+            
+            html += '</tbody></table>';
+            document.getElementById('reportTableContainer').innerHTML = html;
+        }
+
+        function generateEmployeeReport() {
+            const year = currentFilters.year;
+            const monthFilter = currentFilters.month;
+            const employeeId = currentFilters.employee;
+            
+            let filteredPayroll = allPayroll.filter(p => p.period && p.period.includes(year));
+            
+            if (monthFilter !== 'all') {
+                filteredPayroll = filteredPayroll.filter(p => p.period.includes(monthFilter));
+            }
+            
+            if (employeeId !== 'all') {
+                filteredPayroll = filteredPayroll.filter(p => p.employee_id === parseInt(employeeId));
+            }
+            
+            const employeeData = [];
+            
+            for (const emp of allEmployees) {
+                const empPayroll = filteredPayroll.filter(p => p.employee_id === emp.id);
+                if (empPayroll.length === 0 && employeeId !== 'all') continue;
+                
+                const totalGross = empPayroll.reduce((sum, p) => sum + parseFloat(p.gross_salary || 0), 0);
+                const totalDeductions = empPayroll.reduce((sum, p) => sum + parseFloat(p.total_deduction || 0), 0);
+                const totalNet = empPayroll.reduce((sum, p) => sum + parseFloat(p.net_salary || 0), 0);
+                
+                employeeData.push({
+                    id: emp.id,
+                    name: emp.full_name,
+                    position: emp.position || 'Employee',
+                    totalGross,
+                    totalDeductions,
+                    totalNet,
+                    monthCount: empPayroll.length
+                });
+            }
+            
+            const totalGrossAll = employeeData.reduce((sum, d) => sum + d.totalGross, 0);
+            const totalDeductionsAll = employeeData.reduce((sum, d) => sum + d.totalDeductions, 0);
+            const totalNetAll = employeeData.reduce((sum, d) => sum + d.totalNet, 0);
+            
+            document.getElementById('summaryTotalEmployees').textContent = employeeData.length;
+            document.getElementById('summaryTotalGross').textContent = '₱' + totalGrossAll.toLocaleString();
+            document.getElementById('summaryTotalDeductions').textContent = '₱' + totalDeductionsAll.toLocaleString();
+            document.getElementById('summaryTotalNet').textContent = '₱' + totalNetAll.toLocaleString();
+            
+            let html = '<table class="report-table"><thead><tr>';
+            html += '<th>Employee Name</th><th>Position</th><th>Periods</th><th>Gross Pay</th><th>Total Deductions</th><th>Net Pay</th>';
+            html += '</tr></thead><tbody>';
+            
+            employeeData.forEach(emp => {
+                if (emp.totalGross === 0 && emp.totalDeductions === 0 && emp.totalNet === 0 && employeeId === 'all') return;
+                html += `<tr>
+                    <td>${escapeHtml(emp.name)}</td>
+                    <td>${escapeHtml(emp.position)}</td>
+                    <td>${emp.monthCount}</td>
+                    <td>₱${emp.totalGross.toLocaleString()}</td>
+                    <td>₱${emp.totalDeductions.toLocaleString()}</td>
+                    <td class="font-medium text-[#b0303b]">₱${emp.totalNet.toLocaleString()}</td>
+                </tr>`;
+            });
+            
+            if (employeeData.length === 0) {
+                html += '<tr><td colspan="6" class="text-center py-8 text-gray-400">No payroll data found for selected criteria</td></tr>';
+            }
+            
+            html += '</tbody></table>';
+            document.getElementById('reportTableContainer').innerHTML = html;
+        }
+
+        function generateDeductionReport() {
+            const year = currentFilters.year;
+            const monthFilter = currentFilters.month;
+            
+            let filteredPayroll = allPayroll.filter(p => p.period && p.period.includes(year));
+            
+            if (monthFilter !== 'all') {
+                filteredPayroll = filteredPayroll.filter(p => p.period.includes(monthFilter));
+            }
+            
+            const totalSSS = filteredPayroll.reduce((sum, p) => sum + parseFloat(p.sss || 0), 0);
+            const totalPhilHealth = filteredPayroll.reduce((sum, p) => sum + parseFloat(p.philhealth || 0), 0);
+            const totalPagIBIG = filteredPayroll.reduce((sum, p) => sum + parseFloat(p.pagibig || 0), 0);
+            const totalTax = filteredPayroll.reduce((sum, p) => sum + parseFloat(p.withholding_tax || 0), 0);
+            const totalUndertime = filteredPayroll.reduce((sum, p) => sum + parseFloat(p.undertime_deduction || 0), 0);
+            const totalLoans = filteredPayroll.reduce((sum, p) => sum + parseFloat(p.sss_loan || 0) + parseFloat(p.hdmf_loan || 0) + parseFloat(p.cash_advance || 0), 0);
+            const totalDeductions = filteredPayroll.reduce((sum, p) => sum + parseFloat(p.total_deduction || 0), 0);
+            const employeeCount = new Set(filteredPayroll.map(p => p.employee_id)).size;
+            
+            document.getElementById('summaryTotalEmployees').textContent = employeeCount;
+            document.getElementById('summaryTotalGross').textContent = '₱' + filteredPayroll.reduce((sum, p) => sum + parseFloat(p.gross_salary || 0), 0).toLocaleString();
+            document.getElementById('summaryTotalDeductions').textContent = '₱' + totalDeductions.toLocaleString();
+            document.getElementById('summaryTotalNet').textContent = '₱' + filteredPayroll.reduce((sum, p) => sum + parseFloat(p.net_salary || 0), 0).toLocaleString();
+            
+            let html = '<table class="report-table"><thead><tr>';
+            html += '<th>Deduction Type</th><th>Total Amount</th><th>Percentage of Total</th>';
+            html += '</tr></thead><tbody>';
+            
+            const deductionTypes = [
+                { name: 'SSS Contribution', amount: totalSSS },
+                { name: 'PhilHealth Contribution', amount: totalPhilHealth },
+                { name: 'Pag-IBIG Contribution', amount: totalPagIBIG },
+                { name: 'Withholding Tax', amount: totalTax },
+                { name: 'Undertime Deduction', amount: totalUndertime },
+                { name: 'Loans (SSS/HDMF/Cash Advance)', amount: totalLoans }
+            ];
+            
+            deductionTypes.forEach(type => {
+                if (type.amount > 0 || totalDeductions === 0) {
+                    const percentage = totalDeductions > 0 ? ((type.amount / totalDeductions) * 100).toFixed(1) : '0';
+                    html += `<tr>
+                        <td>${type.name}</td>
+                        <td>₱${type.amount.toLocaleString()}</td>
+                        <td>${percentage}%</td>
+                    </tr>`;
+                }
+            });
+            
+            html += `<tr class="font-bold bg-gray-50">
+                <td>TOTAL DEDUCTIONS</td>
+                <td>₱${totalDeductions.toLocaleString()}</td>
+                <td>100%</td>
+            </tr>`;
+            
+            if (totalDeductions === 0) {
+                html = '<div class="text-center py-8 text-gray-400">No deduction data found for selected period</div>';
+            }
+            
+            html += '</tbody></table>';
+            document.getElementById('reportTableContainer').innerHTML = html;
+        }
+
+        function generateAttendanceReport() {
+            const year = currentFilters.year;
+            const monthFilter = currentFilters.month;
+            
+            let filteredAttendance = allAttendance.filter(a => a.date && a.date.includes(year));
+            
+            if (monthFilter !== 'all') {
+                const monthNumber = new Date(Date.parse(monthFilter + " 1, 2000")).getMonth() + 1;
+                const monthStr = monthNumber.toString().padStart(2, '0');
+                filteredAttendance = filteredAttendance.filter(a => a.date.includes(`-${monthStr}-`));
+            }
+            
+            const attendanceByEmployee = [];
+            
+            for (const emp of allEmployees) {
+                const empAttendance = filteredAttendance.filter(a => a.employee_id === emp.id);
+                if (empAttendance.length === 0) continue;
+                
+                const totalHours = empAttendance.reduce((sum, a) => sum + (a.hours_worked || a.hours_attended || 0), 0);
+                const totalOT = empAttendance.reduce((sum, a) => sum + (a.overtime_hours || a.ot_hours || 0), 0);
+                const daysPresent = empAttendance.length;
+                
+                attendanceByEmployee.push({
+                    name: emp.full_name,
+                    position: emp.position || 'Employee',
+                    daysPresent,
+                    totalHours,
+                    totalOT,
+                    avgHoursPerDay: daysPresent > 0 ? (totalHours / daysPresent).toFixed(1) : 0
+                });
+            }
+            
+            const totalDays = attendanceByEmployee.reduce((sum, a) => sum + parseFloat(a.daysPresent || 0), 0);
+            const totalHoursAll = attendanceByEmployee.reduce((sum, a) => sum + parseFloat(a.totalHours || 0), 0);
+            const totalOTAll = attendanceByEmployee.reduce((sum, a) => sum + parseFloat(a.totalOT || 0), 0);
+            
+            document.getElementById('summaryTotalEmployees').textContent = attendanceByEmployee.length;
+            document.getElementById('summaryTotalGross').textContent = totalDays + ' days';
+            document.getElementById('summaryTotalDeductions').textContent = totalHoursAll.toFixed(0) + ' hrs';
+            document.getElementById('summaryTotalNet').textContent = totalOTAll.toFixed(0) + ' hrs';
+            
+            let html = '<table class="report-table"><thead><tr>';
+            html += '<th>Employee Name</th><th>Position</th><th>Days Present</th><th>Total Hours</th><th>Overtime Hours</th><th>Avg Hours/Day</th>';
+            html += '</tr></thead><tbody>';
+            
+            attendanceByEmployee.forEach(emp => {
+                html += `<tr>
+                    <td>${escapeHtml(emp.name)}</td>
+                    <td>${escapeHtml(emp.position)}</td>
+                    <td>${emp.daysPresent}</td>
+                    <td>${emp.totalHours.toFixed(1)}</td>
+                    <td>${emp.totalOT.toFixed(1)}</td>
+                    <td>${emp.avgHoursPerDay}</td>
+                </tr>`;
+            });
+            
+            if (attendanceByEmployee.length === 0) {
+                html = '<div class="text-center py-8 text-gray-400">No attendance data found for selected period</div>';
+            }
+            
+            html += '</tbody></table>';
+            document.getElementById('reportTableContainer').innerHTML = html;
+        }
+
+        function exportToExcel() {
+            const table = document.querySelector('#reportTableContainer table');
+            if (!table) {
+                alert('No data to export');
+                return;
+            }
+            
+            const ws = XLSX.utils.table_to_sheet(table);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, currentReportType === 'monthly' ? 'Monthly Payroll' : 
+                currentReportType === 'employee' ? 'Employee Salary' :
+                currentReportType === 'deduction' ? 'Deduction Summary' : 'Attendance Report');
+            
+            const fileName = `${currentReportType}_report_${currentFilters.year}_${currentFilters.month !== 'all' ? currentFilters.month : 'full'}.xlsx`;
+            XLSX.writeFile(wb, fileName);
+        }
+
+        function exportToPDF() {
+            const element = document.getElementById('reportContainer');
+            const opt = {
+                margin: [0.5, 0.5, 0.5, 0.5],
+                filename: `${currentReportType}_report_${currentFilters.year}_${currentFilters.month !== 'all' ? currentFilters.month : 'full'}.pdf`,
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2 },
+                jsPDF: { unit: 'in', format: 'a4', orientation: 'landscape' }
+            };
+            html2pdf().set(opt).from(element).save();
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return str.replace(/[&<>]/g, function(m) {
+                if (m === '&') return '&amp;';
+                if (m === '<') return '&lt;';
+                if (m === '>') return '&gt;';
+                return m;
+            });
+        }
+
+        function logout() {
+            localStorage.clear();
+            window.location.href = 'index.html';
+        }
+    </script>
+</body>
+</html>

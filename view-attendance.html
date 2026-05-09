@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Philtech GMA | View Attendance</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Security Scripts -->
+    <script src="js/csrf.js"></script>
+    <script src="js/xss-protection.js"></script>
+    <script src="js/secure-ajax.js"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #dcd3b8; }
+        .calendar-day {
+            aspect-ratio: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: white;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 14px;
+            color: #374151;
+            border: 2px solid transparent;
+        }
+        .calendar-day:hover {
+            transform: scale(1.05);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        .calendar-day.has-attendance {
+            background: #d4edda;
+            border-color: #28a745;
+            color: #155724;
+        }
+        .calendar-day.selected {
+            background: #b0303b;
+            color: white;
+            border-color: #f4e8c1;
+            transform: scale(1.05);
+        }
+        .calendar-day.other-month {
+            opacity: 0.3;
+            background: #f3f4f6;
+        }
+        .calendar-day.weekend {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        /* Add to existing style section */
+        .group:hover .group-hover\:block {
+            display: block !important;
+        }
+
+        .user-dropdown {
+            position: absolute;
+            right: 0;
+            margin-top: 0.5rem;
+            width: 12rem;
+            background-color: white;
+            border-radius: 0.5rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            padding: 0.5rem 0;
+            z-index: 50;
+            display: none;
+        }
+
+        .group:hover .user-dropdown {
+            display: block;
+        }
+    </style>
+</head>
+<body class="text-gray-700 antialiased min-h-screen">
+
+    <!-- Top Navigation Bar -->
+    <nav class="bg-[#8a1f27] text-white px-6 py-3 flex justify-between items-center sticky top-0 z-50 shadow-md">
+        <div class="flex items-center gap-2">
+            <div class="w-8 h-8 bg-[#b0303b] rounded-lg flex items-center justify-center">
+                <i class="fa-solid fa-file-invoice text-[#f4e8c1]"></i>
+            </div>
+            <span class="font-bold text-lg">Philtech GMA</span>
+        </div>
+        
+        <div class="hidden md:flex items-center gap-1">
+            <a href="dashboard.html" class="nav-link px-4 py-2 rounded-lg hover:bg-[#d98989] transition-colors font-medium">Dashboard</a>
+            <a href="employees.html" class="nav-link px-4 py-2 rounded-lg hover:bg-[#d98989] transition-colors font-medium">Employees</a>
+            <a href="payroll.html" class="nav-link px-4 py-2 rounded-lg hover:bg-[#d98989] transition-colors font-medium">Payroll</a>
+            <a href="attendance.html" class="nav-link px-4 py-2 rounded-lg hover:bg-[#d98989] transition-colors font-medium">Attendance</a>
+            <a href="settings.html" class="nav-link px-4 py-2 rounded-lg hover:bg-[#d98989] transition-colors font-medium">Settings</a>
+        </div>
+        
+        <div class="flex items-center gap-3">
+            <span class="text-sm hidden sm:block" id="userName">Accountant</span>
+            <div class="relative group">
+                <img src="https://i.pravatar.cc/150?u=accountant" class="w-8 h-8 rounded-full border-2 border-white cursor-pointer">
+                <div class="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg py-1 hidden group-hover:block z-50">
+                    <a href="#" onclick="logout()" class="block px-4 py-2 text-sm text-red-600 hover:bg-gray-100">Logout</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="p-6 md:p-8 max-w-6xl mx-auto">
+        
+        <!-- Header -->
+        <div class="flex justify-between items-center mb-6">
+            <div>
+                <h1 class="text-2xl font-bold text-[#8a1f27]">Attendance Details</h1>
+                <p class="text-gray-500 text-sm mt-1" id="currentDate"></p>
+            </div>
+            <div class="flex gap-2">
+                <button onclick="editAttendance()" class="bg-[#b0303b] text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-[#8a1f27] transition-colors shadow-md flex items-center gap-2">
+                    <i class="fa-regular fa-pen-to-square"></i> Edit
+                </button>
+                <button onclick="goBack()" class="bg-white px-4 py-2 rounded-lg text-sm font-medium shadow-sm hover:shadow-md transition-colors flex items-center gap-2">
+                    <i class="fa-solid fa-arrow-left"></i> Back
+                </button>
+            </div>
+        </div>
+
+        <!-- Employee Summary Card -->
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-6">
+            <div class="flex items-center gap-4">
+                <div class="w-16 h-16 bg-[#b0303b]/10 rounded-full flex items-center justify-center text-[#b0303b] text-2xl">
+                    <i class="fa-regular fa-user"></i>
+                </div>
+                <div class="flex-1">
+                    <h2 class="text-xl font-bold text-gray-800" id="employeeName">Loading...</h2>
+                    <p class="text-gray-500 text-sm" id="employeePosition">-</p>
+                </div>
+                <div class="text-right">
+                    <p class="text-sm text-gray-500">Payroll Period</p>
+                    <p class="font-medium text-gray-800" id="payrollPeriod">-</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Calendar Section -->
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-6">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-lg font-semibold text-gray-800">Daily Attendance Calendar</h3>
+                <div class="flex items-center gap-2">
+                    <button onclick="changeMonth(-1)" class="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+                        <i class="fa-solid fa-chevron-left"></i>
+                    </button>
+                    <span class="font-medium text-gray-800 w-32 text-center" id="currentMonthYear">June 2025</span>
+                    <button onclick="changeMonth(1)" class="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+                        <i class="fa-solid fa-chevron-right"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Calendar Grid -->
+            <div class="grid grid-cols-7 gap-2 mb-4">
+                <div class="text-center text-sm font-medium text-gray-500 py-2">Sun</div>
+                <div class="text-center text-sm font-medium text-gray-500 py-2">Mon</div>
+                <div class="text-center text-sm font-medium text-gray-500 py-2">Tue</div>
+                <div class="text-center text-sm font-medium text-gray-500 py-2">Wed</div>
+                <div class="text-center text-sm font-medium text-gray-500 py-2">Thu</div>
+                <div class="text-center text-sm font-medium text-gray-500 py-2">Fri</div>
+                <div class="text-center text-sm font-medium text-gray-500 py-2">Sat</div>
+            </div>
+            <div class="grid grid-cols-7 gap-2" id="calendarGrid">
+                <!-- Calendar will be populated by JS -->
+            </div>
+        </div>
+
+        <!-- Selected Day Details -->
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6" id="dayDetails" style="display: none;">
+            <h3 class="text-lg font-semibold text-gray-800 mb-4" id="selectedDate">June 1, 2025</h3>
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div class="bg-gray-50 p-4 rounded-xl text-center">
+                    <p class="text-sm text-gray-500">Hours Worked</p>
+                    <p class="text-2xl font-bold text-[#b0303b]" id="hoursWorked">--</p>
+                </div>
+                <div class="bg-gray-50 p-4 rounded-xl text-center">
+                    <p class="text-sm text-gray-500">Overtime</p>
+                    <p class="text-2xl font-bold text-[#b0303b]" id="overtime">--</p>
+                </div>
+                <div class="bg-gray-50 p-4 rounded-xl text-center">
+                    <p class="text-sm text-gray-500">Pay Type</p>
+                    <p class="text-2xl font-bold text-[#b0303b]" id="payType">--</p>
+                </div>
+                <div class="bg-gray-50 p-4 rounded-xl text-center" id="adminPayRateBox" style="display: none;">
+                    <p class="text-sm text-gray-500">Admin Pay Rate</p>
+                    <p class="text-2xl font-bold text-[#b0303b]" id="adminPayRate">--</p>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="js/database.js"></script>
+    <script src="js/navigation.js"></script>
+    <script>
+        let attendanceId = null;
+        let currentAttendance = null;
+        let currentMonth = new Date().getMonth();
+        let currentYear = new Date().getFullYear();
+        const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            await Database.ensureDatabaseReady();
+            document.getElementById('currentDate').textContent = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+            
+            // Get attendance ID from URL
+            const urlParams = new URLSearchParams(window.location.search);
+            attendanceId = parseInt(urlParams.get('id'));
+            
+            if (!attendanceId) {
+                alert('Attendance ID not provided');
+                window.location.href = 'attendance.html';
+                return;
+            }
+            
+            await loadAttendanceData();
+        });
+
+        async function loadAttendanceData() {
+            try {
+                currentAttendance = await Database.getAttendanceById(attendanceId);
+                
+                if (!currentAttendance) {
+                    alert('Attendance record not found');
+                    window.location.href = 'attendance.html';
+                    return;
+                }
+                
+                // Get employee info
+                const employee = await Database.getEmployeeById(currentAttendance.employee_id);
+                
+                // Update header
+                document.getElementById('employeeName').textContent = employee ? employee.full_name : 'Unknown';
+                document.getElementById('employeePosition').textContent = employee ? employee.position : 'Unknown';
+                document.getElementById('payrollPeriod').textContent = currentAttendance.payroll_period || 'N/A';
+                
+                // Parse payroll period to get month and year for calendar
+                if (currentAttendance.payroll_period) {
+                    const parts = currentAttendance.payroll_period.split(' ');
+                    if (parts.length >= 2) {
+                        currentMonth = monthNames.indexOf(parts[0]);
+                        currentYear = parseInt(parts[1]) || new Date().getFullYear();
+                    }
+                }
+                
+                renderCalendar();
+                
+            } catch (error) {
+                console.error('Error loading attendance:', error);
+                alert('Error loading attendance data');
+            }
+        }
+
+        function renderCalendar() {
+            const firstDay = new Date(currentYear, currentMonth, 1).getDay();
+            const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+            const daysInPrevMonth = new Date(currentYear, currentMonth, 0).getDate();
+            
+            document.getElementById('currentMonthYear').textContent = `${monthNames[currentMonth]} ${currentYear}`;
+            
+            let calendarHTML = "";
+            
+            // Previous month days
+            for (let i = firstDay - 1; i >= 0; i--) {
+                calendarHTML += `<div class="calendar-day other-month">${daysInPrevMonth - i}</div>`;
+            }
+            
+            // Current month days
+            for (let day = 1; day <= daysInMonth; day++) {
+                const dateStr = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                const dayOfWeek = new Date(currentYear, currentMonth, day).getDay();
+                const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+                
+                // Check if this date has attendance
+                const dailyAttendance = currentAttendance.daily_attendance || [];
+                const hasAttendance = dailyAttendance.some(d => d.date === dateStr);
+                
+                let classes = "calendar-day";
+                if (hasAttendance) classes += " has-attendance";
+                if (isWeekend) classes += " weekend";
+                
+                calendarHTML += `<div class="${classes}" onclick="showDayDetails('${dateStr}')">${day}</div>`;
+            }
+            
+            // Next month days
+            const totalCells = firstDay + daysInMonth;
+            const remainingCells = 42 - totalCells;
+            for (let i = 1; i <= remainingCells; i++) {
+                calendarHTML += `<div class="calendar-day other-month">${i}</div>`;
+            }
+            
+            document.getElementById('calendarGrid').innerHTML = calendarHTML;
+        }
+
+        function changeMonth(delta) {
+            currentMonth += delta;
+            if (currentMonth > 11) {
+                currentMonth = 0;
+                currentYear++;
+            } else if (currentMonth < 0) {
+                currentMonth = 11;
+                currentYear--;
+            }
+            renderCalendar();
+        }
+
+        function showDayDetails(dateStr) {
+            // Remove selected class from all days
+            document.querySelectorAll('.calendar-day').forEach(el => {
+                el.classList.remove('selected');
+            });
+            
+            // Add selected class to clicked day
+            const dayElements = document.querySelectorAll('.calendar-day:not(.other-month)');
+            const day = parseInt(dateStr.split('-')[2]);
+            if (dayElements[day - 1]) {
+                dayElements[day - 1].classList.add('selected');
+            }
+            
+            // Find attendance for this date
+            const dailyAttendance = currentAttendance.daily_attendance || [];
+            const record = dailyAttendance.find(r => r.date === dateStr);
+            
+            const dayDetails = document.getElementById('dayDetails');
+            const selectedDate = document.getElementById('selectedDate');
+            const hoursWorked = document.getElementById('hoursWorked');
+            const overtime = document.getElementById('overtime');
+            const payType = document.getElementById('payType');
+            const adminPayRateBox = document.getElementById('adminPayRateBox');
+            const adminPayRate = document.getElementById('adminPayRate');
+            
+            const date = new Date(dateStr);
+            selectedDate.textContent = date.toLocaleDateString('en-US', { 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric' 
+            });
+            
+            if (record) {
+                dayDetails.style.display = 'block';
+                hoursWorked.textContent = (record.hours_worked || 0) + ' hrs';
+                overtime.textContent = (record.overtime || 0) + ' hrs';
+                
+                const payTypeDisplay = record.pay_type === 'admin' ? 'Admin Pay' : 'Regular Pay';
+                payType.textContent = payTypeDisplay;
+                
+                if (record.pay_type === 'admin' && record.admin_pay_rate) {
+                    adminPayRateBox.style.display = 'block';
+                    adminPayRate.textContent = '₱' + parseFloat(record.admin_pay_rate).toFixed(2) + '/hr';
+                } else {
+                    adminPayRateBox.style.display = 'none';
+                }
+            } else {
+                dayDetails.style.display = 'block';
+                hoursWorked.textContent = 'No Record';
+                overtime.textContent = 'No Record';
+                payType.textContent = '--';
+                adminPayRateBox.style.display = 'none';
+            }
+        }
+
+        function editAttendance() {
+            window.location.href = `edit-attendance.html?id=${attendanceId}`;
+        }
+
+        function goBack() {
+            window.location.href = 'attendance.html';
+        }
+    </script>
+</body>
+</html>

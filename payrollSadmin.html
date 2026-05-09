@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Philtech GMA | Superadmin Payroll</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Security Scripts -->
+    <script src="js/csrf.js"></script>
+    <script src="js/xss-protection.js"></script>
+    <script src="js/secure-ajax.js"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #dcd3b8; }
+        .nav-link.active { background-color: #b0303b; color: white; }
+        .stat-card { transition: all 0.3s ease; }
+        .stat-card:hover { transform: translateY(-5px); box-shadow: 0 10px 25px -5px rgba(176, 48, 59, 0.2); }
+        
+        .status-pending { background-color: #fff3cd; color: #856404; padding: 4px 12px; border-radius: 50px; font-size: 0.75rem; font-weight: 500; }
+        .status-approved { background-color: #d4edda; color: #155724; padding: 4px 12px; border-radius: 50px; font-size: 0.75rem; font-weight: 500; }
+        .status-paid { background-color: #cce5ff; color: #004085; padding: 4px 12px; border-radius: 50px; font-size: 0.75rem; font-weight: 500; }
+        .status-rejected { background-color: #f8d7da; color: #721c24; padding: 4px 12px; border-radius: 50px; font-size: 0.75rem; font-weight: 500; }
+        
+        .summary-card {
+            background: linear-gradient(135deg, #b0303b 0%, #8a1f27 100%);
+            color: white;
+            border-radius: 16px;
+            padding: 24px;
+            position: relative;
+            overflow: hidden;
+        }
+        .summary-card::after { content: '💰'; position: absolute; bottom: -20px; right: -20px; font-size: 120px; opacity: 0.1; transform: rotate(-15deg); }
+        
+        .approval-badge { display: inline-flex; align-items: center; gap: 4px; padding: 4px 8px; border-radius: 50px; font-size: 0.7rem; font-weight: 500; }
+        .approval-pending { background-color: #fff3cd; color: #856404; }
+        .approval-approved { background-color: #d4edda; color: #155724; }
+        
+        .approve-btn { background-color: #10b981; color: white; padding: 6px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: 500; cursor: pointer; transition: all 0.3s; border: none; }
+        .approve-btn:hover { background-color: #059669; transform: translateY(-1px); }
+        .reject-btn { background-color: #ef4444; color: white; padding: 6px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: 500; cursor: pointer; transition: all 0.3s; border: none; }
+        .reject-btn:hover { background-color: #dc2626; transform: translateY(-1px); }
+        .download-btn { background-color: #28a745; color: white; padding: 6px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: 500; cursor: pointer; transition: all 0.3s; border: none; }
+        .download-btn:hover { background-color: #218838; transform: translateY(-1px); }
+        
+        .filter-pill { padding: 6px 16px; border-radius: 50px; font-size: 0.875rem; font-weight: 500; cursor: pointer; transition: all 0.3s; background-color: white; border: 1px solid #e5e7eb; }
+        .filter-pill.active { background-color: #b0303b; color: white; border-color: #b0303b; }
+        .filter-pill:hover { background-color: #f3f4f6; }
+        
+.modal { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000; }
+        .modal.hidden { display: none; }
+        .modal-content { background: white; border-radius: 16px; padding: 24px; max-width: 400px; width: 90%; }
+    </style>
+</head>
+<body class="text-gray-700 antialiased min-h-screen">
+
+    <nav class="bg-[#8a1f27] text-white px-6 py-3 flex justify-between items-center sticky top-0 z-50 shadow-md">
+        <div class="flex items-center gap-2">
+            <div class="w-8 h-8 bg-[#b0303b] rounded-lg flex items-center justify-center"><i class="fa-solid fa-crown text-[#f4e8c1]"></i></div>
+            <span class="font-bold text-lg">Philtech GMA - Superadmin</span>
+        </div>
+        <div class="hidden md:flex items-center gap-1">
+            <a href="dashboardSadmin.html" class="nav-link px-4 py-2 rounded-lg hover:bg-[#d98989] transition-colors font-medium">Dashboard</a>
+            <a href="employeesSadmin.html" class="nav-link px-4 py-2 rounded-lg hover:bg-[#d98989] transition-colors font-medium">Employees</a>
+            <a href="payrollSadmin.html" class="nav-link active px-4 py-2 rounded-lg bg-[#b0303b] text-white font-medium">Payroll</a>
+            <a href="user-mgmt.html" class="nav-link px-4 py-2 rounded-lg hover:bg-[#d98989] transition-colors font-medium">Users</a>
+            <a href="settingsSadmin.html" class="nav-link px-4 py-2 rounded-lg hover:bg-[#d98989] transition-colors font-medium">Settings</a>
+        </div>
+        <div class="flex items-center gap-3"><span class="text-sm hidden sm:block" id="userName">Superadmin</span><div class="relative group"><img src="https://i.pravatar.cc/150?u=superadmin" class="w-8 h-8 rounded-full border-2 border-white cursor-pointer"><div class="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg py-1 hidden group-hover:block z-50"><a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Profile</a><a href="#" onclick="logout()" class="block px-4 py-2 text-sm text-red-600 hover:bg-gray-100">Logout</a></div></div></div>
+    </nav>
+
+    <main class="p-6 md:p-8 max-w-7xl mx-auto">
+        
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+            <div><h1 class="text-2xl font-bold text-[#8a1f27]">Payroll Management</h1><p class="text-gray-500 text-sm mt-1" id="currentDate"></p></div>
+            <div class="flex items-center gap-3">
+                <div class="relative"><i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i><input type="text" id="searchInput" placeholder="Search employee..." class="pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-[#b0303b] focus:border-transparent w-64"></div>
+                <select id="periodFilter" class="border border-gray-200 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-[#b0303b]"><option value="all">All Periods</option></select>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 stat-card"><div class="flex items-center gap-3 mb-3"><div class="w-10 h-10 rounded-lg bg-[#b0303b]/10 text-[#b0303b] flex items-center justify-center"><i class="fa-solid fa-users"></i></div><span class="text-sm font-medium text-gray-500">Total Employees</span></div><h2 class="text-2xl font-bold text-gray-800" id="totalEmployees">0</h2></div>
+            <div class="bg-white p-6 rounded-2xl shadow-sm stat-card"><div class="flex items-center gap-3 mb-3"><div class="w-10 h-10 rounded-lg bg-[#b0303b]/10 text-[#b0303b] flex items-center justify-center"><i class="fa-solid fa-money-bill-wave"></i></div><span class="text-sm font-medium text-gray-500">Total Payroll</span></div><h2 class="text-2xl font-bold text-gray-800" id="totalPayroll">₱0</h2></div>
+            <div class="bg-white p-6 rounded-2xl shadow-sm stat-card"><div class="flex items-center gap-3 mb-3"><div class="w-10 h-10 rounded-lg bg-[#b0303b]/10 text-[#b0303b] flex items-center justify-center"><i class="fa-regular fa-clock"></i></div><span class="text-sm font-medium text-gray-500">Pending</span></div><h2 class="text-2xl font-bold text-yellow-600" id="pendingCount">0</h2></div>
+            <div class="bg-white p-6 rounded-2xl shadow-sm stat-card"><div class="flex items-center gap-3 mb-3"><div class="w-10 h-10 rounded-lg bg-[#b0303b]/10 text-[#b0303b] flex items-center justify-center"><i class="fa-solid fa-check-circle"></i></div><span class="text-sm font-medium text-gray-500">Approved</span></div><h2 class="text-2xl font-bold text-green-600" id="approvedCount">0</h2></div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+            <div class="lg:col-span-2 bg-white p-6 rounded-2xl shadow-sm border border-gray-100"><div class="flex justify-between items-center mb-4"><h3 class="font-semibold text-gray-800">Payroll Overview</h3></div><div class="h-64"><canvas id="payrollChart"></canvas></div></div>
+            <div class="summary-card"><h3 class="text-xl font-bold mb-4">Payroll Summary</h3><div class="space-y-4 mb-6"><div><p class="text-white/80 text-sm">Total Employees</p><p class="text-3xl font-bold" id="summaryEmployees">0</p></div><div><p class="text-white/80 text-sm">Gross Payroll</p><p class="text-3xl font-bold" id="summaryGross">₱0</p></div><div><p class="text-white/80 text-sm">Total Deductions</p><p class="text-2xl font-bold" id="summaryDeductions">₱0</p></div><div><p class="text-white/80 text-sm">Net Payroll</p><p class="text-3xl font-bold" id="summaryNet">₱0</p></div></div><div class="grid grid-cols-2 gap-2"><button onclick="filterByStatus('pending')" class="bg-white/20 text-white py-2 rounded-lg hover:bg-white/30 transition-colors text-sm">View Pending</button><button onclick="exportSummary()" class="bg-white/20 text-white py-2 rounded-lg hover:bg-white/30 transition-colors text-sm">Export</button></div></div>
+        </div>
+
+        <div class="flex flex-wrap gap-2 mb-6">
+            <button class="filter-pill active" onclick="filterByStatus('all')" id="filterAll">All</button>
+            <button class="filter-pill" onclick="filterByStatus('pending')" id="filterPending">Pending</button>
+            <button class="filter-pill" onclick="filterByStatus('approved')" id="filterApproved">Approved</button>
+            <button class="filter-pill" onclick="filterByStatus('paid')" id="filterPaid">Paid</button>
+            <button class="filter-pill" onclick="filterByStatus('rejected')" id="filterRejected">Rejected</button>
+        </div>
+
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="w-full text-left">
+                    <thead class="bg-gray-50 text-xs text-gray-500">
+                        <tr><th class="py-3 px-6">Employee</th><th class="py-3">Period</th><th class="py-3">Gross</th><th class="py-3">Deductions</th><th class="py-3">Net</th><th class="py-3">Status</th><th class="py-3">Approval</th><th class="py-3 text-center">Actions</th></tr>
+                    </thead>
+                    <tbody class="text-sm" id="payrollTableBody"><tr><td colspan="8" class="py-8 text-center text-gray-400">Loading...</td></tr></tbody>
+                </table>
+            </div>
+            <div class="px-6 py-3 border-t border-gray-100 flex justify-between items-center"><span class="text-xs text-gray-400" id="paginationInfo">Showing 0-0 of 0</span><div class="flex gap-1" id="paginationControls"></div></div>
+        </div>
+    </main>
+
+<div id="rejectModal" class="modal" style="display: none;">
+        <div class="modal-content"><h3 class="text-xl font-bold text-[#8a1f27] mb-4">Reject Payroll</h3><textarea id="rejectReason" rows="3" class="w-full px-4 py-2 border rounded-lg mb-4" placeholder="Reason for rejection..."></textarea><div class="flex gap-3 justify-end"><button onclick="closeRejectModal()" class="px-4 py-2 border rounded-lg">Cancel</button><button onclick="confirmReject()" class="px-4 py-2 bg-red-600 text-white rounded-lg">Reject</button></div></div>
+    </div>
+
+<script src="js/api-integration.js"></script>
+    <script src="js/database.js"></script>
+    <script src="js/navigation.js"></script>
+    <script>
+        let allPayroll = [], allEmployees = [], currentPage = 1, itemsPerPage = 10, currentFilter = 'all', currentRejectId = null, payrollChart = null;
+
+        // Direct API calls (like accountant pages)
+        async function loadPayrollFromAPI() {
+            try {
+                const response = await fetch('/api/payroll.php', { credentials: 'include' });
+                if (!response.ok) return [];
+                return await response.json();
+            } catch (error) {
+                console.error("Error loading payroll:", error);
+                return [];
+            }
+        }
+
+        async function loadEmployeesFromAPI() {
+            try {
+                const response = await fetch('/api/employees.php', { credentials: 'include' });
+                if (!response.ok) return [];
+                return await response.json();
+            } catch (error) {
+                console.error("Error loading employees:", error);
+                return [];
+            }
+        }
+
+        async function updatePayrollAPI(id, data) {
+            try {
+                const response = await fetch('/api/payroll.php', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ id, ...data })
+                });
+                return response.ok;
+            } catch (error) {
+                console.error("Error updating payroll:", error);
+                return false;
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('currentDate').textContent = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+            loadData();
+            initChart();
+            document.getElementById('searchInput').addEventListener('input', filterTable);
+            document.getElementById('periodFilter').addEventListener('change', filterTable);
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('filter') === 'pending') filterByStatus('pending');
+        });
+
+        async function loadData() { 
+            allPayroll = await loadPayrollFromAPI();
+            allEmployees = await loadEmployeesFromAPI();
+            updateStats(); 
+            filterTable(); 
+        }
+        
+        function updateStats() {
+            const totalEmployees = allEmployees.length;
+            const totalPayroll = allPayroll.reduce((s,p) => s + parseFloat(p.net_salary || 0), 0);
+            const pendingCount = allPayroll.filter(p => p.status === 'Pending' || !p.approved).length;
+            const approvedCount = allPayroll.filter(p => p.status === 'Approved' || p.approved).length;
+            document.getElementById('totalEmployees').textContent = totalEmployees;
+            document.getElementById('totalPayroll').textContent = '₱' + totalPayroll.toLocaleString();
+            document.getElementById('pendingCount').textContent = pendingCount;
+            document.getElementById('approvedCount').textContent = approvedCount;
+            
+            const grossTotal = allPayroll.reduce((s,p) => s + parseFloat(p.gross_salary || 0), 0);
+            const deductionsTotal = allPayroll.reduce((s,p) => s + parseFloat(p.total_deduction || 0), 0);
+            document.getElementById('summaryEmployees').textContent = totalEmployees;
+            document.getElementById('summaryGross').textContent = '₱' + grossTotal.toLocaleString();
+            document.getElementById('summaryDeductions').textContent = '₱' + deductionsTotal.toLocaleString();
+            document.getElementById('summaryNet').textContent = '₱' + totalPayroll.toLocaleString();
+            
+            // Populate period filter
+            const periods = [...new Set(allPayroll.map(p => p.period).filter(p => p))];
+            const periodSelect = document.getElementById('periodFilter');
+            periods.forEach(period => {
+                if (!Array.from(periodSelect.options).some(opt => opt.value === period)) {
+                    const option = document.createElement('option');
+                    option.value = period;
+                    option.textContent = period;
+                    periodSelect.appendChild(option);
+                }
+            });
+        }
+        
+        function filterTable() {
+            let filtered = [...allPayroll];
+            const search = document.getElementById('searchInput').value.toLowerCase();
+            if (search) {
+                filtered = filtered.filter(p => {
+                    const emp = allEmployees.find(e => e.id === p.employee_id);
+                    return emp?.full_name?.toLowerCase().includes(search);
+                });
+            }
+            const period = document.getElementById('periodFilter').value;
+            if (period !== 'all') filtered = filtered.filter(p => p.period === period);
+            if (currentFilter !== 'all') {
+                if (currentFilter === 'pending') filtered = filtered.filter(p => p.status === 'Pending' || !p.approved);
+                else filtered = filtered.filter(p => p.status?.toLowerCase() === currentFilter);
+            }
+            renderTable(filtered);
+        }
+        
+        function renderTable(records) {
+            const start = (currentPage - 1) * itemsPerPage, end = start + itemsPerPage, pageData = records.slice(start, end), totalPages = Math.ceil(records.length / itemsPerPage);
+            const tbody = document.getElementById('payrollTableBody');
+            if (pageData.length === 0) { tbody.innerHTML = '<tr><td colspan="8" class="py-8 text-center text-gray-400">No payroll records found</td></tr>'; }
+            else {
+                tbody.innerHTML = pageData.map(p => {
+                    const emp = allEmployees.find(e => e.id === p.employee_id) || { full_name: 'Unknown' };
+                    let statusBadge = '';
+                    if (p.status === 'Pending' || !p.approved) statusBadge = '<span class="status-pending">Pending</span>';
+                    else if (p.status === 'Approved') statusBadge = '<span class="status-approved">Approved</span>';
+                    else if (p.status === 'Paid') statusBadge = '<span class="status-paid">Paid</span>';
+                    else if (p.status === 'Rejected') statusBadge = '<span class="status-rejected">Rejected</span>';
+                    else statusBadge = '<span class="bg-gray-100 text-gray-600 px-2 py-1 rounded-full text-xs">Draft</span>';
+                    
+                    let approvalBadge = '';
+                    if (p.approved) approvalBadge = '<span class="approval-badge approval-approved"><i class="fa-regular fa-circle-check"></i> Approved</span>';
+                    else if (p.status === 'Rejected') approvalBadge = '<span class="approval-badge status-rejected"><i class="fa-regular fa-circle-xmark"></i> Rejected</span>';
+                    else approvalBadge = '<span class="approval-badge approval-pending"><i class="fa-regular fa-clock"></i> Pending</span>';
+                    
+                    let actions = '';
+                    if (p.status === 'Pending' || !p.approved) {
+                        actions = `<button onclick="approvePayroll(${p.id})" class="approve-btn mr-1"><i class="fa-regular fa-circle-check mr-1"></i>Approve</button>
+                                   <button onclick="openRejectModal(${p.id})" class="reject-btn mr-1"><i class="fa-regular fa-circle-xmark mr-1"></i></button>`;
+                    } else if (p.status === 'Approved') {
+                        actions = `<button onclick="downloadPayslip(${p.id})" class="download-btn"><i class="fa-solid fa-download mr-1"></i>Payslip</button>`;
+                    } else if (p.status === 'Paid') {
+                        actions = `<button onclick="viewPayslip(${p.id})" class="text-blue-600 hover:text-blue-800 mr-2" title="View"><i class="fa-regular fa-eye"></i></button>
+                                   <button disabled class="bg-gray-200 text-gray-400 px-2 py-1 rounded text-xs cursor-not-allowed">Paid</button>`;
+                    } else {
+                        actions = `<button onclick="viewDetails(${p.id})" class="text-gray-600 hover:text-gray-800"><i class="fa-regular fa-eye"></i></button>`;
+                    }
+                    
+                    return `<tr class="border-b hover:bg-gray-50">
+                        <td class="py-3 px-6 font-medium">${escapeHtml(emp.full_name)}</td>
+                        <td class="py-3">${p.period || 'N/A'}</td>
+                        <td class="py-3">₱${(p.gross_salary || 0).toLocaleString()}</td>
+                        <td class="py-3">₱${(p.total_deduction || 0).toLocaleString()}</td>
+                        <td class="py-3 font-medium text-[#b0303b]">₱${(p.net_salary || 0).toLocaleString()}</td>
+                        <td class="py-3">${statusBadge}</td>
+                        <td class="py-3">${approvalBadge}</td>
+                        <td class="py-3 text-center"><div class="flex items-center justify-center gap-1">${actions}</div></td>
+                    </tr>`;
+                }).join('');
+            }
+            document.getElementById('paginationInfo').textContent = `Showing ${records.length ? start + 1 : 0}-${Math.min(end, records.length)} of ${records.length}`;
+            renderPagination(totalPages);
+        }
+        
+        function renderPagination(totalPages) {
+            let html = `<button class="w-8 h-8 rounded-lg border ${currentPage === 1 ? 'bg-gray-100 text-gray-400' : 'hover:bg-[#b0303b] hover:text-white'}" onclick="changePage(${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''}><i class="fa-solid fa-chevron-left text-xs"></i></button>`;
+            for (let i = 1; i <= totalPages; i++) {
+                if (i === 1 || i === totalPages || (i >= currentPage - 2 && i <= currentPage + 2)) {
+                    html += `<button class="w-8 h-8 rounded-lg ${i === currentPage ? 'bg-[#b0303b] text-white' : 'border hover:bg-[#d98989] hover:text-white'}" onclick="changePage(${i})">${i}</button>`;
+                } else if (i === currentPage - 3 || i === currentPage + 3) {
+                    html += `<span class="w-8 h-8 flex items-center justify-center">...</span>`;
+                }
+            }
+            html += `<button class="w-8 h-8 rounded-lg border ${currentPage === totalPages ? 'bg-gray-100 text-gray-400' : 'hover:bg-[#b0303b] hover:text-white'}" onclick="changePage(${currentPage + 1})" ${currentPage === totalPages ? 'disabled' : ''}><i class="fa-solid fa-chevron-right text-xs"></i></button>`;
+            document.getElementById('paginationControls').innerHTML = html;
+        }
+        
+        function changePage(page) {
+            const filtered = getFilteredRecords();
+            const totalPages = Math.ceil(filtered.length / itemsPerPage);
+            if (page < 1 || page > totalPages) return;
+            currentPage = page;
+            filterTable();
+        }
+        
+        function getFilteredRecords() {
+            let filtered = [...allPayroll];
+            const search = document.getElementById('searchInput').value.toLowerCase();
+            if (search) filtered = filtered.filter(p => {
+                const emp = allEmployees.find(e => e.id === p.employee_id);
+                return emp?.full_name?.toLowerCase().includes(search);
+            });
+            const period = document.getElementById('periodFilter').value;
+            if (period !== 'all') filtered = filtered.filter(p => p.period === period);
+            if (currentFilter !== 'all') {
+                if (currentFilter === 'pending') filtered = filtered.filter(p => p.status === 'Pending' || !p.approved);
+                else filtered = filtered.filter(p => p.status?.toLowerCase() === currentFilter);
+            }
+            return filtered;
+        }
+        
+        function filterByStatus(status) {
+            currentFilter = status;
+            currentPage = 1;
+            document.querySelectorAll('.filter-pill').forEach(p => p.classList.remove('active'));
+            const filterMap = { all: 'filterAll', pending: 'filterPending', approved: 'filterApproved', paid: 'filterPaid', rejected: 'filterRejected' };
+            document.getElementById(filterMap[status])?.classList.add('active');
+            filterTable();
+        }
+        
+async function approvePayroll(id) {
+            if (!confirm('Approve this payroll record?')) return;
+            try {
+                const success = await updatePayrollAPI(id, {
+                    status: 'Approved',
+                    approved: true,
+                    approved_at: new Date().toISOString(),
+                    approved_by: 'superadmin'
+                });
+                if (success) {
+                    alert('Payroll approved successfully');
+                    await loadData();
+                } else {
+                    throw new Error('Failed to approve');
+                }
+            } catch (error) {
+                console.error('Error approving payroll:', error);
+                alert('Error approving payroll');
+            }
+        }
+        
+function openRejectModal(id) {
+            currentRejectId = id;
+            document.getElementById('rejectModal').style.display = 'flex';
+        }
+        
+        function closeRejectModal() {
+            document.getElementById('rejectModal').style.display = 'none';
+            document.getElementById('rejectReason').value = '';
+            currentRejectId = null;
+        }
+        
+        async function confirmReject() {
+            if (!currentRejectId) return;
+            const reason = document.getElementById('rejectReason').value;
+            if (!reason) { alert('Please provide a reason for rejection'); return; }
+            try {
+                const success = await updatePayrollAPI(currentRejectId, {
+                    status: 'Rejected',
+                    approved: false,
+                    rejection_reason: reason,
+                    rejected_at: new Date().toISOString(),
+                    rejected_by: 'superadmin'
+                });
+                if (success) {
+                    alert('Payroll rejected');
+                    closeRejectModal();
+                    await loadData();
+                } else {
+                    throw new Error('Failed to reject');
+                }
+            } catch (error) {
+                console.error('Error rejecting payroll:', error);
+                alert('Error rejecting payroll');
+            }
+        }
+        
+        function downloadPayslip(id) {
+            const payroll = allPayroll.find(p => p.id === id);
+            if (!payroll) return;
+            if (payroll.status !== 'Approved' && !payroll.approved) {
+                alert('This payroll is not yet approved. Payslip cannot be generated.');
+                return;
+            }
+            window.open(`payslipSadmin.html?id=${id}`, '_blank');
+        }
+        
+        function viewPayslip(id) { window.location.href = `payslipSadmin.html?id=${id}`; }
+        function viewDetails(id) { window.location.href = `view-payroll.html?id=${id}`; }
+        function exportSummary() { alert('Export summary - will generate report'); }
+        
+        function initChart() {
+            const ctx = document.getElementById('payrollChart').getContext('2d');
+            const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+            const monthlyData = new Array(12).fill(0);
+            allPayroll.forEach(p => {
+                if (p.period) {
+                    const month = months.findIndex(m => p.period.includes(m));
+                    if (month >= 0) monthlyData[month] += p.net_salary || 0;
+                }
+            });
+            if (payrollChart) payrollChart.destroy();
+            payrollChart = new Chart(ctx, {
+                type: 'bar',
+                data: { labels: months, datasets: [{ label: 'Net Payroll', data: monthlyData.map(v => v / 1000), backgroundColor: '#b0303b', borderRadius: 4 }] },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { callbacks: { label: (context) => '₱' + (context.raw * 1000).toLocaleString() } } } }
+            });
+        }
+        
+        function escapeHtml(str) {
+            if (!str) return '';
+            return str.replace(/[&<>]/g, function(m) {
+                if (m === '&') return '&amp;';
+                if (m === '<') return '&lt;';
+                if (m === '>') return '&gt;';
+                return m;
+            });
+        }
+        
+        function logout() { localStorage.clear(); window.location.href = 'index.html'; }
+    </script>
+</body>
+</html>

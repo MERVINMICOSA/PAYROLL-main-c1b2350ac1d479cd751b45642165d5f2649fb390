@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Philtech GMA | Edit Employee</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Security Scripts -->
+    <script src="js/csrf.js"></script>
+    <script src="js/xss-protection.js"></script>
+    <script src="js/secure-ajax.js"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #dcd3b8; }
+        /* Add to existing style section */
+        .group:hover .group-hover\:block {
+            display: block !important;
+        }
+
+        .user-dropdown {
+            position: absolute;
+            right: 0;
+            margin-top: 0.5rem;
+            width: 12rem;
+            background-color: white;
+            border-radius: 0.5rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            padding: 0.5rem 0;
+            z-index: 50;
+            display: none;
+        }
+
+        .group:hover .user-dropdown {
+            display: block;
+        }
+    </style>
+</head>
+<body class="text-gray-700 antialiased min-h-screen">
+
+    <!-- Top Navigation Bar -->
+    <nav class="bg-[#8a1f27] text-white px-6 py-3 flex justify-between items-center sticky top-0 z-50 shadow-md">
+        <div class="flex items-center gap-2">
+            <div class="w-8 h-8 bg-[#b0303b] rounded-lg flex items-center justify-center">
+                <i class="fa-solid fa-file-invoice text-[#f4e8c1]"></i>
+            </div>
+            <span class="font-bold text-lg">Philtech GMA</span>
+        </div>
+        
+        <div class="hidden md:flex items-center gap-1">
+            <a href="dashboard.html" class="nav-link px-4 py-2 rounded-lg hover:bg-[#d98989] transition-colors font-medium">Dashboard</a>
+            <a href="employees.html" class="nav-link px-4 py-2 rounded-lg hover:bg-[#d98989] transition-colors font-medium">Employees</a>
+            <a href="payroll.html" class="nav-link px-4 py-2 rounded-lg hover:bg-[#d98989] transition-colors font-medium">Payroll</a>
+            <a href="attendance.html" class="nav-link px-4 py-2 rounded-lg hover:bg-[#d98989] transition-colors font-medium">Attendance</a>
+            <a href="settings.html" class="nav-link px-4 py-2 rounded-lg hover:bg-[#d98989] transition-colors font-medium">Settings</a>
+        </div>
+        
+        <div class="flex items-center gap-3">
+            <span class="text-sm hidden sm:block" id="userName">Accountant</span>
+            <div class="relative group">
+                <img src="https://i.pravatar.cc/150?u=accountant" class="w-8 h-8 rounded-full border-2 border-white cursor-pointer">
+                <div class="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg py-1 hidden group-hover:block z-50">
+                    <a href="#" onclick="logout()" class="block px-4 py-2 text-sm text-red-600 hover:bg-gray-100">Logout</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="p-6 md:p-8 max-w-4xl mx-auto">
+        
+        <!-- Header -->
+        <div class="flex justify-between items-center mb-6">
+            <div>
+                <h1 class="text-2xl font-bold text-[#8a1f27]">Edit Employee</h1>
+                <p class="text-gray-500 text-sm mt-1" id="currentDate"></p>
+            </div>
+            <button onclick="goBack()" class="bg-white px-4 py-2 rounded-lg text-sm font-medium shadow-sm hover:shadow-md transition-shadow flex items-center gap-2">
+                <i class="fa-solid fa-arrow-left"></i> Back
+            </button>
+        </div>
+
+        <!-- Form Card -->
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-8">
+            <form id="employeeForm" class="space-y-6">
+                <input type="hidden" id="employeeId">
+                
+                <!-- Personal Information -->
+                <div>
+                    <h2 class="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                        <i class="fa-regular fa-user text-[#b0303b]"></i> Personal Information
+                    </h2>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Full Name <span class="text-red-500">*</span></label>
+                            <input type="text" id="fullName" required 
+                                class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#b0303b] focus:border-transparent">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Email Address <span class="text-red-500">*</span></label>
+                            <input type="email" id="email" required 
+                                class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#b0303b] focus:border-transparent">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Phone Number</label>
+                            <input type="tel" id="phone" 
+                                class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#b0303b] focus:border-transparent">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Birth Date</label>
+                            <input type="date" id="birthDate" 
+                                class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#b0303b] focus:border-transparent">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Employment Details -->
+                <div class="pt-4 border-t border-gray-100">
+                    <h2 class="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                        <i class="fa-solid fa-briefcase text-[#b0303b]"></i> Employment Details
+                    </h2>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Employee ID</label>
+                            <input type="text" id="employeeIdField" readonly
+                                class="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Position <span class="text-red-500">*</span></label>
+                            <input type="text" id="position" required 
+                                class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#b0303b] focus:border-transparent">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Department</label>
+                            <select id="department" 
+                                class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#b0303b] focus:border-transparent">
+                                <option value="Academic">Academic</option>
+                                <option value="Administration">Administration</option>
+                                <option value="Finance">Finance</option>
+                                <option value="Maintenance">Maintenance</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Employment Type <span class="text-red-500">*</span></label>
+                            <select id="employmentType" required 
+                                class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#b0303b] focus:border-transparent">
+                                <option value="Regular">Regular</option>
+                                <option value="Contractual">Contractual</option>
+                                <option value="Part-time">Part-time</option>
+                                <option value="Probationary">Probationary</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Hire Date</label>
+                            <input type="date" id="hireDate" 
+                                class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#b0303b] focus:border-transparent">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Status</label>
+                            <select id="status" 
+                                class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#b0303b] focus:border-transparent">
+                                <option value="Active">Active</option>
+                                <option value="Inactive">Inactive</option>
+                                <option value="On Leave">On Leave</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Compensation -->
+                <div class="pt-4 border-t border-gray-100">
+                    <h2 class="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                        <i class="fa-solid fa-money-bill-wave text-[#b0303b]"></i> Compensation
+                    </h2>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Base Salary <span class="text-red-500">*</span></label>
+                            <div class="relative">
+                                <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">₱</span>
+                                <input type="number" id="salary" required step="0.01"
+                                    class="w-full pl-8 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#b0303b] focus:border-transparent">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Hourly Rate</label>
+                            <div class="relative">
+                                <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">₱</span>
+                                <input type="number" id="hourlyRate" step="0.01"
+                                    class="w-full pl-8 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#b0303b] focus:border-transparent">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Admin Pay Rate</label>
+                            <div class="relative">
+                                <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">₱</span>
+                                <input type="number" id="adminPayRate" step="0.01"
+                                    class="w-full pl-8 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#b0303b] focus:border-transparent">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Government Numbers -->
+                <div class="pt-4 border-t border-gray-100">
+                    <h2 class="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                        <i class="fa-solid fa-id-card text-[#b0303b]"></i> Government Numbers
+                    </h2>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">SSS Number</label>
+                            <input type="text" id="sss" 
+                                class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#b0303b] focus:border-transparent">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">PhilHealth Number</label>
+                            <input type="text" id="philhealth" 
+                                class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#b0303b] focus:border-transparent">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Pag-IBIG Number</label>
+                            <input type="text" id="pagibig" 
+                                class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#b0303b] focus:border-transparent">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">TIN Number</label>
+                            <input type="text" id="tin" 
+                                class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#b0303b] focus:border-transparent">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Emergency Contact -->
+                <div class="pt-4 border-t border-gray-100">
+                    <h2 class="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                        <i class="fa-solid fa-phone text-[#b0303b]"></i> Emergency Contact
+                    </h2>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Contact Person</label>
+                            <input type="text" id="emergencyName" 
+                                class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#b0303b] focus:border-transparent">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Relationship</label>
+                            <input type="text" id="emergencyRelation" 
+                                class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#b0303b] focus:border-transparent">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Phone Number</label>
+                            <input type="tel" id="emergencyPhone" 
+                                class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#b0303b] focus:border-transparent">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Form Actions -->
+                <div class="flex justify-end gap-3 pt-4 border-t border-gray-100">
+                    <button type="button" onclick="goBack()" class="px-6 py-2 border border-gray-200 rounded-lg font-medium hover:bg-gray-50 transition-colors">
+                        Cancel
+                    </button>
+                    <button type="submit" class="px-6 py-2 bg-[#b0303b] text-white rounded-lg font-medium hover:bg-[#8a1f27] transition-colors shadow-md">
+                        Update Employee
+                    </button>
+                </div>
+            </form>
+        </div>
+    </main>
+
+    <script src="js/database.js"></script>
+    <script src="js/navigation.js"></script>
+    <script>
+        let employeeId = null;
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            await Database.ensureDatabaseReady();
+            document.getElementById('currentDate').textContent = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+            
+            // Get employee ID from URL
+            const urlParams = new URLSearchParams(window.location.search);
+            employeeId = parseInt(urlParams.get('id'));
+            
+            if (!employeeId) {
+                alert('Employee ID not provided');
+                window.location.href = 'employees.html';
+                return;
+            }
+            
+            await loadEmployeeData();
+        });
+
+        async function loadEmployeeData() {
+            try {
+                const response = await fetch(`/api/employee.php?id=${employeeId}`, {
+                    credentials: 'include'
+                });
+                
+                if (!response.ok) {
+                    if (response.status === 401) {
+                        window.location.href = 'index.html';
+                        return;
+                    }
+                    throw new Error('Failed to fetch employee');
+                }
+                
+                const employee = await response.json();
+                
+                if (!employee || employee.error) {
+                    alert('Employee not found');
+                    window.location.href = 'employees.html';
+                    return;
+                }
+                
+                // Populate form fields
+                document.getElementById('employeeId').value = employee.id;
+                document.getElementById('employeeIdField').value = employee.employee_id || `EMP${employee.id}`;
+                document.getElementById('fullName').value = employee.full_name || '';
+                document.getElementById('email').value = employee.email || '';
+                document.getElementById('phone').value = employee.phone || '';
+                document.getElementById('birthDate').value = employee.birth_date || '';
+                document.getElementById('position').value = employee.position || '';
+                document.getElementById('department').value = employee.department || 'Academic';
+                document.getElementById('employmentType').value = employee.employment_type || 'Regular';
+                document.getElementById('hireDate').value = employee.hire_date || '';
+                document.getElementById('status').value = employee.status || 'Active';
+                document.getElementById('salary').value = employee.base_salary || 0;
+                document.getElementById('hourlyRate').value = employee.hourly_rate || 0;
+                document.getElementById('adminPayRate').value = employee.admin_pay_rate || 0;
+                document.getElementById('sss').value = employee.sss || '';
+                document.getElementById('philhealth').value = employee.philhealth || '';
+                document.getElementById('pagibig').value = employee.pagibig || '';
+                document.getElementById('tin').value = employee.tin || '';
+                document.getElementById('emergencyName').value = employee.emergency_name || '';
+                document.getElementById('emergencyRelation').value = employee.emergency_relation || '';
+                document.getElementById('emergencyPhone').value = employee.emergency_phone || '';
+                
+            } catch (error) {
+                console.error('Error loading employee:', error);
+                alert('Error loading employee data');
+            }
+        }
+
+        document.getElementById('employeeForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            try {
+                const updatedEmployee = {
+                    id: employeeId,
+                    employee_id: document.getElementById('employeeIdField').value,
+                    full_name: document.getElementById('fullName').value,
+                    email: document.getElementById('email').value,
+                    phone: document.getElementById('phone').value,
+                    birth_date: document.getElementById('birthDate').value,
+                    position: document.getElementById('position').value,
+                    department: document.getElementById('department').value,
+                    employment_type: document.getElementById('employmentType').value,
+                    hire_date: document.getElementById('hireDate').value,
+                    status: document.getElementById('status').value,
+                    base_salary: parseFloat(document.getElementById('salary').value) || 0,
+                    hourly_rate: parseFloat(document.getElementById('hourlyRate').value) || 0,
+                    admin_pay_rate: parseFloat(document.getElementById('adminPayRate').value) || 0,
+                    sss: document.getElementById('sss').value,
+                    philhealth: document.getElementById('philhealth').value,
+                    pagibig: document.getElementById('pagibig').value,
+                    tin: document.getElementById('tin').value,
+                    emergency_name: document.getElementById('emergencyName').value,
+                    emergency_relation: document.getElementById('emergencyRelation').value,
+                    emergency_phone: document.getElementById('emergencyPhone').value,
+                    updated_at: new Date().toISOString()
+                };
+
+                const response = await fetch('/api/employees.php', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify(updatedEmployee)
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Failed to update employee');
+                }
+                
+                const result = await response.json();
+                if (result.success) {
+                    alert('Employee updated successfully!');
+                    window.location.href = 'employees.html';
+                }
+            } catch (error) {
+                console.error('Error updating employee:', error);
+                alert('Error updating employee. Please try again.');
+            }
+        });
+
+        function goBack() {
+            window.location.href = 'employees.html';
+        }
+    </script>
+</body>
+</html>

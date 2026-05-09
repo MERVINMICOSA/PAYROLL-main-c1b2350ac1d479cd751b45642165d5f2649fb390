@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Philtech GMA | Edit User</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Security Scripts -->
+    <script src="js/csrf.js"></script>
+    <script src="js/xss-protection.js"></script>
+    <script src="js/secure-ajax.js"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #dcd3b8; }
+        /* Add to existing style section */
+        .group:hover .group-hover\:block {
+            display: block !important;
+        }
+
+        .user-dropdown {
+            position: absolute;
+            right: 0;
+            margin-top: 0.5rem;
+            width: 12rem;
+            background-color: white;
+            border-radius: 0.5rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            padding: 0.5rem 0;
+            z-index: 50;
+            display: none;
+        }
+
+        .group:hover .user-dropdown {
+            display: block;
+        }
+    </style>
+</head>
+<body class="text-gray-700 antialiased min-h-screen">
+
+    <!-- Top Navigation Bar -->
+    <nav class="bg-[#8a1f27] text-white px-6 py-3 flex justify-between items-center sticky top-0 z-50 shadow-md">
+        <div class="flex items-center gap-2">
+            <div class="w-8 h-8 bg-[#b0303b] rounded-lg flex items-center justify-center">
+                <i class="fa-solid fa-file-invoice text-[#f4e8c1]"></i>
+            </div>
+            <span class="font-bold text-lg">Philtech GMA</span>
+        </div>
+        
+        <div class="hidden md:flex items-center gap-1">
+            <a href="dashboardSadmin.html" class="nav-link px-4 py-2 rounded-lg hover:bg-[#d98989] transition-colors font-medium">Dashboard</a>
+            <a href="employeesSadmin.html" class="nav-link px-4 py-2 rounded-lg hover:bg-[#d98989] transition-colors font-medium">Employees</a>
+            <a href="payrollSadmin.html" class="nav-link px-4 py-2 rounded-lg hover:bg-[#d98989] transition-colors font-medium">Payroll</a>
+            <a href="attendanceSadmin.html" class="nav-link px-4 py-2 rounded-lg hover:bg-[#d98989] transition-colors font-medium">Attendance</a>
+            <a href="user-mgmt.html" class="nav-link px-4 py-2 rounded-lg hover:bg-[#d98989] transition-colors font-medium">Users</a>
+            <a href="settingsSadmin.html" class="nav-link px-4 py-2 rounded-lg hover:bg-[#d98989] transition-colors font-medium">Settings</a>
+        </div>
+        
+        <div class="flex items-center gap-3">
+            <span class="text-sm hidden sm:block" id="userName">Superadmin</span>
+            <div class="relative group">
+                <img src="https://i.pravatar.cc/150?u=superadmin" class="w-8 h-8 rounded-full border-2 border-white cursor-pointer">
+                <div class="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg py-1 hidden group-hover:block z-50">
+                    <a href="#" onclick="logout()" class="block px-4 py-2 text-sm text-red-600 hover:bg-gray-100">Logout</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="p-6 md:p-8 max-w-4xl mx-auto">
+        
+        <!-- Header -->
+        <div class="flex justify-between items-center mb-6">
+            <div>
+                <h1 class="text-2xl font-bold text-[#8a1f27]">Edit User</h1>
+                <p class="text-gray-500 text-sm mt-1" id="currentDate"></p>
+            </div>
+            <button onclick="goBack()" class="bg-white px-4 py-2 rounded-lg text-sm font-medium shadow-sm hover:shadow-md transition-shadow flex items-center gap-2">
+                <i class="fa-solid fa-arrow-left"></i> Back
+            </button>
+        </div>
+
+        <!-- Form Card -->
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-8">
+            <form id="userForm" class="space-y-6">
+                <input type="hidden" id="userId">
+                
+                <!-- Account Information -->
+                <div>
+                    <h2 class="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                        <i class="fa-solid fa-user-lock text-[#b0303b]"></i> Account Information
+                    </h2>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Username <span class="text-red-500">*</span></label>
+                            <input type="text" id="username" required 
+                                class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#b0303b] focus:border-transparent"
+                                placeholder="Enter username">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Full Name <span class="text-red-500">*</span></label>
+                            <input type="text" id="fullName" required 
+                                class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#b0303b] focus:border-transparent"
+                                placeholder="Enter full name">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
+                            <input type="email" id="email" 
+                                class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#b0303b] focus:border-transparent"
+                                placeholder="user@philtech.edu">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Phone Number</label>
+                            <input type="tel" id="phone" 
+                                class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#b0303b] focus:border-transparent"
+                                placeholder="(046) 123-4567">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Password Change (Optional) -->
+                <div class="pt-4 border-t border-gray-100">
+                    <h2 class="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                        <i class="fa-solid fa-key text-[#b0303b]"></i> Change Password (Optional)
+                    </h2>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">New Password</label>
+                            <input type="password" id="newPassword" 
+                                class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#b0303b] focus:border-transparent"
+                                placeholder="Leave blank to keep current">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Confirm New Password</label>
+                            <input type="password" id="confirmPassword" 
+                                class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#b0303b] focus:border-transparent"
+                                placeholder="Confirm new password">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Role and Status -->
+                <div class="pt-4 border-t border-gray-100">
+                    <h2 class="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                        <i class="fa-solid fa-shield text-[#b0303b]"></i> Role & Permissions
+                    </h2>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">User Role <span class="text-red-500">*</span></label>
+                            <select id="role" required class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#b0303b] focus:border-transparent">
+                                <option value="Superadmin">Superadmin</option>
+                                <option value="Administrator">Administrator (Accountant)</option>
+                                <option value="Payroll Staff">Payroll Staff</option>
+                                <option value="Teacher">Teacher</option>
+                                <option value="Viewer">Viewer (Read Only)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Status</label>
+                            <select id="status" class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#b0303b] focus:border-transparent">
+                                <option value="Active">Active</option>
+                                <option value="Inactive">Inactive</option>
+                                <option value="Suspended">Suspended</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Employee Link (Optional) -->
+                <div class="pt-4 border-t border-gray-100">
+                    <h2 class="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                        <i class="fa-regular fa-user text-[#b0303b]"></i> Link to Employee (Optional)
+                    </h2>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Employee ID</label>
+                            <input type="text" id="employeeId" 
+                                class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#b0303b] focus:border-transparent"
+                                placeholder="e.g., EMP001 or TCH001">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Or Select Employee</label>
+                            <select id="employeeSelect" class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#b0303b] focus:border-transparent">
+                                <option value="">-- Not Linked --</option>
+                            </select>
+                        </div>
+                    </div>
+                    <p class="text-xs text-gray-400 mt-2">Linking to an employee allows the user to access teacher-specific features if role is Teacher.</p>
+                </div>
+
+                <!-- Account Metadata (Read-only) -->
+                <div class="pt-4 border-t border-gray-100">
+                    <h2 class="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                        <i class="fa-regular fa-clock text-[#b0303b]"></i> Account Metadata
+                    </h2>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Created At</label>
+                            <input type="text" id="createdAt" readonly 
+                                class="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Last Login</label>
+                            <input type="text" id="lastLogin" readonly 
+                                class="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Form Actions -->
+                <div class="flex justify-end gap-3 pt-4 border-t border-gray-100">
+                    <button type="button" onclick="goBack()" class="px-6 py-2 border border-gray-200 rounded-lg font-medium hover:bg-gray-50 transition-colors">
+                        Cancel
+                    </button>
+                    <button type="submit" class="px-6 py-2 bg-[#b0303b] text-white rounded-lg font-medium hover:bg-[#8a1f27] transition-colors shadow-md">
+                        Update User
+                    </button>
+                </div>
+            </form>
+        </div>
+    </main>
+
+    <script src="js/database.js"></script>
+    <script src="js/navigation.js"></script>
+    <script>
+        let userId = null;
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            await Database.ensureDatabaseReady();
+            document.getElementById('currentDate').textContent = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+            
+            // Get user ID from URL
+            const urlParams = new URLSearchParams(window.location.search);
+            userId = parseInt(urlParams.get('id'));
+            
+            if (!userId) {
+                alert('User ID not provided');
+                window.location.href = 'user-mgmt.html';
+                return;
+            }
+            
+            // Load employees for dropdown
+            const employees = await Database.getAllEmployees();
+            const select = document.getElementById('employeeSelect');
+            select.innerHTML = '<option value="">-- Not Linked --</option>';
+            employees.forEach(emp => {
+                select.innerHTML += `<option value="${emp.id}">${emp.full_name} - ${emp.position}</option>`;
+            });
+            
+            await loadUserData();
+        });
+
+        async function loadUserData() {
+            try {
+                const user = await Database.getUserById(userId);
+                
+                if (!user) {
+                    alert('User not found');
+                    window.location.href = 'user-mgmt.html';
+                    return;
+                }
+                
+                // Populate form fields
+                document.getElementById('userId').value = user.id;
+                document.getElementById('username').value = user.username || '';
+                document.getElementById('fullName').value = user.full_name || '';
+                document.getElementById('email').value = user.email || '';
+                document.getElementById('phone').value = user.phone || '';
+                document.getElementById('role').value = user.role || 'Viewer';
+                document.getElementById('status').value = user.status || 'Active';
+                document.getElementById('employeeId').value = user.employee_id || '';
+                
+                // Set employee select if linked
+                if (user.linked_employee) {
+                    document.getElementById('employeeSelect').value = user.linked_employee;
+                }
+                
+                // Set metadata
+                document.getElementById('createdAt').value = user.created_at ? new Date(user.created_at).toLocaleString() : 'N/A';
+                document.getElementById('lastLogin').value = user.last_login ? new Date(user.last_login).toLocaleString() : 'Never';
+                
+            } catch (error) {
+                console.error('Error loading user:', error);
+                alert('Error loading user data');
+            }
+        }
+
+        document.getElementById('userForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const newPassword = document.getElementById('newPassword').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+            
+            if (newPassword || confirmPassword) {
+                if (newPassword !== confirmPassword) {
+                    alert('New passwords do not match');
+                    return;
+                }
+                if (newPassword.length < 6) {
+                    alert('Password must be at least 6 characters');
+                    return;
+                }
+            }
+            
+            try {
+                const users = await Database.getAllUsers();
+                
+                // Check if username exists (excluding current user)
+                const usernameExists = users.some(u => 
+                    u.username.toLowerCase() === document.getElementById('username').value.toLowerCase() && 
+                    u.id !== userId
+                );
+                
+                if (usernameExists) {
+                    alert('Username already exists. Please choose another.');
+                    return;
+                }
+                
+                const updatedUser = {
+                    id: userId,
+                    username: document.getElementById('username').value,
+                    full_name: document.getElementById('fullName').value,
+                    email: document.getElementById('email').value,
+                    phone: document.getElementById('phone').value,
+                    role: document.getElementById('role').value,
+                    status: document.getElementById('status').value,
+                    employee_id: document.getElementById('employeeId').value || null,
+                    linked_employee: document.getElementById('employeeSelect').value || null,
+                    updated_at: new Date().toISOString()
+                };
+
+                // Only update password if provided
+                if (newPassword) {
+                    updatedUser.password = newPassword;
+                }
+
+                await Database.updateUser(updatedUser);
+                alert('User updated successfully!');
+                window.location.href = 'user-mgmt.html';
+            } catch (error) {
+                console.error('Error updating user:', error);
+                alert('Error updating user. Please try again.');
+            }
+        });
+
+        function goBack() {
+            window.location.href = 'user-mgmt.html';
+        }
+    </script>
+</body>
+</html>
