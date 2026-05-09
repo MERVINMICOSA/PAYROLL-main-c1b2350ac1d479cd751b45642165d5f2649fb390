@@ -171,26 +171,41 @@ window.addEventListener('storage', function(event) {
     }
 });
 
-// Check session on window focus (detect logout in other tabs)
-window.addEventListener('focus', async function() {
+async function verifySessionWithServer() {
     if (publicPages.includes(currentPageName)) return;
-    
-    // Check local session state first
+
     const localState = getSessionState();
     if (localState === SESSION_LOGGED_OUT) {
         handleCrossTabLogout();
         return;
     }
-    
-    // Verify with server
+
+    // Always trust /api/auth/session.php — never localStorage alone for auth.
     const user = await checkSession();
     if (!user) {
-        // Session no longer valid
         setSessionState(SESSION_LOGGED_OUT);
         handleCrossTabLogout();
     } else if (window.currentUser && window.currentUser.id !== user.id) {
-        // Different user logged in
         handleCrossTabLogout();
+    }
+}
+
+// Check session on window focus (detect logout in other tabs)
+window.addEventListener('focus', function() {
+    verifySessionWithServer();
+});
+
+// Tab visibility (mobile / switching tabs without focus on some browsers)
+document.addEventListener('visibilitychange', function() {
+    if (document.visibilityState === 'visible') {
+        verifySessionWithServer();
+    }
+});
+
+// bfcache restore: backend session may be gone after deploy while page was cached
+window.addEventListener('pageshow', function(event) {
+    if (event.persisted) {
+        verifySessionWithServer();
     }
 });
 

@@ -76,12 +76,18 @@ try {
     
     // Regenerate session ID to prevent session fixation
     session_regenerate_id(true);
+
+    $sessionUser = $_SESSION['user'];
+    $newSessionId = session_id();
+
+    // Persist session to storage before sending JSON (important on ephemeral hosts / PHP-FPM)
+    session_write_close();
     
     echo json_encode([
         'success' => true,
         'message' => 'Login successful',
-        'user' => $_SESSION['user'],
-        'session_id' => session_id()
+        'user' => $sessionUser,
+        'session_id' => $newSessionId
     ]);
     
 } catch (PDOException $e) {
