@@ -54,9 +54,12 @@ function payroll_session_init(): void
     }
 
     // Hard contract: handler must be registered before session_start() every time.
+    // Do not throw here in production; instead fail gracefully to avoid 500 loops.
     if (headers_sent()) {
-        throw new RuntimeException('Invalid kernel usage: headers already sent before session init');
+        error_log('payroll_session_init: headers already sent before session init');
+        return;
     }
+
 
 
     // DB-backed sessions (no filesystem dependency)

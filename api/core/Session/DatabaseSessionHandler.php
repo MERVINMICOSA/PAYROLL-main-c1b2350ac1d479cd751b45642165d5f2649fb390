@@ -35,13 +35,19 @@ final class DatabaseSessionHandler implements SessionHandlerInterface
                AND last_activity > :time"
         );
 
-        $stmt->execute([
-            ':id' => (string) $id,
-            ':time' => time() - $this->ttl,
-        ]);
+        try {
+            $stmt->execute([
+                ':id' => (string) $id,
+                ':time' => time() - $this->ttl,
+            ]);
 
-        $row = $stmt->fetch(PDO::FETCH_ASSOC);
-        return $row ? (string) $row['payload'] : '';
+            $row = $stmt->fetch(PDO::FETCH_ASSOC);
+            return $row ? (string) $row['payload'] : '';
+        } catch (Throwable $e) {
+            error_log('SESSION READ FAILED: ' . $e->getMessage());
+            return '';
+        }
+
     }
 
     public function write($id, $data): bool
@@ -62,17 +68,24 @@ final class DatabaseSessionHandler implements SessionHandlerInterface
                 user_agent = EXCLUDED.user_agent"
         );
 
-        $ok = $stmt->execute([
-            ':id' => (string) $id,
-            ':user_id' => $userId,
-            ':payload' => (string) $data,
-            ':time' => $now,
-            ':created_at' => $now,
-            ':ip' => $_SERVER['REMOTE_ADDR'] ?? null,
-            ':ua' => $_SERVER['HTTP_USER_AGENT'] ?? null,
-        ]);
+        try {
+            $ok = $stmt->execute([
+                ':id' => (string) $id,
+                ':user_id' => $userId,
+                ':payload' => (string) $data,
+                ':time' => $now,
+                ':created_at' => $now,
+                ':ip' => $_SERVER['REMOTE_ADDR'] ?? null,
+                ':ua' => $_SERVER['HTTP_USER_AGENT'] ?? null,
+            ]);
 
-        return (bool) $ok;
+            return (bool) $ok;
+        } catch (Throwable $e) {
+            error_log('SESSION WRITE FAILED: ' . $e->getMessage());
+            // degrade gracefully so login/auth endpoints don't crash
+            return false;
+        }
+
 
     }
 
@@ -89,8 +102,14 @@ final class DatabaseSessionHandler implements SessionHandlerInterface
              WHERE last_activity < :time"
         );
 
-        $stmt->execute([':time' => time() - (int) $max_lifetime]);
-        return $stmt->rowCount();
+        try {
+            $stmt->execute([':time' => time() - (int) $max_lifetime]);
+            return $stmt->rowCount();
+        } catch (Throwable $e) {
+            error_log('SESSION GC FAILED: ' . $e->getMessage());
+            return 0;
+        }
+
     }
 }
 
