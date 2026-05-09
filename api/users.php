@@ -1,33 +1,11 @@
 <?php
 // api/users.php - User management endpoint (superadmin only)
 
-require_once __DIR__ . '/config/session-start.php';
-require_once __DIR__ . '/config/cors-headers.php';
+require_once __DIR__ . '/core/bootstrap.php';
 require_once __DIR__ . '/middleware/auth.php';
 require_once __DIR__ . '/middleware/sanitize.php';
-header("Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS");
 
-// Prevent any HTML output on errors
-ini_set('display_errors', '0');
-error_reporting(E_ALL);
-set_error_handler(function ($errno, $errstr, $errfile, $errline) {
-    http_response_code(500);
-    echo json_encode(['error' => 'Server error: ' . $errstr]);
-    exit;
-});
-
-// Handle preflight
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-    http_response_code(200);
-    exit;
-}
-
-// Validate session
-if (!isset($_SESSION['user_id']) || !isset($_SESSION['user'])) {
-    http_response_code(401);
-    echo json_encode(['error' => 'Unauthorized - Please log in', 'session_active' => false]);
-    exit;
-}
+require_auth();
 
 // Only superadmin can manage users
 if ($_SERVER['REQUEST_METHOD'] !== 'GET') {

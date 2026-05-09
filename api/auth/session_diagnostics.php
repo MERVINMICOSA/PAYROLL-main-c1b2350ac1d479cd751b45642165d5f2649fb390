@@ -7,15 +7,13 @@
  *   fetch('/api/auth/session_diagnostics.php', { credentials: 'include' })
  */
 
-require_once __DIR__ . '/../_bootstrap.php';
+require_once __DIR__ . '/../core/bootstrap.php';
 
 // Stealth off by default — avoids exposing session internals when env is not set.
 if (getenv('SESSION_DIAGNOSTICS') !== '1') {
     http_response_code(404);
     exit;
 }
-
-bootstrapStartSession();
 
 $status = session_status();
 $statusLabels = [
@@ -40,6 +38,7 @@ jsonResponse([
     'save_path_writable' => $savePath !== '' && is_dir($savePath) && is_writable($savePath),
     'session_file' => $sessionFile,
     'session_file_exists' => $sessionFile !== '' && is_file($sessionFile),
+    'ini_session_save_path' => ini_get('session.save_path'),
     'cookie_name' => session_name(),
     'cookie_php_sessid_present' => isset($_COOKIE['PHPSESSID']),
     'cookie_len' => isset($_COOKIE['PHPSESSID']) ? strlen((string) $_COOKIE['PHPSESSID']) : 0,

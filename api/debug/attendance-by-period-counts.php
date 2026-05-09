@@ -5,8 +5,7 @@
 //   GET /api/debug/attendance-by-period-counts.php?period_start=YYYY-MM-DD&period_end=YYYY-MM-DD
 // If period_start/end are not provided, it uses the most recently updated period in period_settings.
 
-require_once __DIR__ . '/../config/session-start.php';
-require_once __DIR__ . '/../config/cors-headers.php';
+require_once __DIR__ . '/../core/bootstrap.php';
 require_once __DIR__ . '/../middleware/auth.php';
 
 header("Content-Type: application/json");

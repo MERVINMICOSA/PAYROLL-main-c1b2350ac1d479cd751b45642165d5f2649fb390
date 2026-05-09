@@ -1,17 +1,7 @@
 <?php
 // api/auth/logout.php - Enhanced for cross-tab logout
 
-require_once __DIR__ . '/../config/cors-headers.php';
-header("Access-Control-Allow-Credentials: true");
-header("Access-Control-Allow-Methods: POST, OPTIONS");
-
-// Handle preflight
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-    http_response_code(200);
-    exit;
-}
-
-require_once __DIR__ . '/../config/session-start.php';
+require_once __DIR__ . '/../core/bootstrap.php';
 
 // Get session info before destroying (for logging if needed)
 $sessionUser = isset($_SESSION['user']) ? $_SESSION['user']['username'] ?? 'unknown' : 'none';

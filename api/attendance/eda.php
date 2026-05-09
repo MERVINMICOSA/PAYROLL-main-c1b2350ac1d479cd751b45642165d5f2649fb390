@@ -2,9 +2,9 @@
 ini_set('display_errors', 0);
 error_reporting(E_ALL);
 
-require_once __DIR__ . '/../_bootstrap.php';
-bootstrapStartSession();
-bootstrapRequireAuth();
+require_once __DIR__ . '/../core/bootstrap.php';
+
+require_auth();
 
 function send_json($data, $code = 200) {
     if ($code >= 400) {

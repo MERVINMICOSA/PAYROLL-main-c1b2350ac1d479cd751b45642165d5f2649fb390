@@ -2,9 +2,9 @@
 // ===============================
 // SAFE SESSION START
 // ===============================
-require_once __DIR__ . '/../_bootstrap.php';
-bootstrapStartSession();
-bootstrapRequireAuth();
+require_once __DIR__ . '/../core/bootstrap.php';
+
+require_auth();
 
 // ===============================
 // ERROR HANDLER (prevents HTML output)

@@ -1,9 +1,9 @@
 <?php
 declare(strict_types=1);
 
-require_once __DIR__ . '/../_bootstrap.php';
-bootstrapStartSession();
-bootstrapRequireAuth();
+require_once __DIR__ . '/../core/bootstrap.php';
+
+require_auth();
 
 // ===========================
 // DATABASE SAFE INIT

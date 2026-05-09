@@ -1,35 +1,9 @@
 <?php
 // api/period/list.php - Get all saved periods
 
-session_start();
+require_once __DIR__ . '/../core/bootstrap.php';
 
-$allowed_origins = array(
-    'http://localhost:5500',
-    'http://localhost:3000',
-    'http://localhost:8000',
-    'http://127.0.0.1:5500',
-    'https://philtech-payroll.onrender.com'
-);
-$origin = $_SERVER['HTTP_ORIGIN'] ?? '';
-if (in_array($origin, $allowed_origins)) {
-    header("Access-Control-Allow-Origin: $origin");
-}
-
-header("Content-Type: application/json");
-header("Access-Control-Allow-Credentials: true");
-header("Access-Control-Allow-Methods: GET, OPTIONS");
-header("Access-Control-Allow-Headers: Content-Type");
-
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-    http_response_code(200);
-    exit;
-}
-
-if (!isset($_SESSION['user_id'])) {
-    http_response_code(401);
-    echo json_encode(['error' => 'Unauthorized - Please log in']);
-    exit;
-}
+require_auth();
 
 require_once __DIR__ . '/../config/database.php';
 

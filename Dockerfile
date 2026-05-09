@@ -23,9 +23,12 @@ RUN a2enmod rewrite \
 # Copy all files to Apache document root
 COPY . /var/www/html/
 
-# Set proper permissions
-RUN chown -R www-data:www-data /var/www/html \
+# Permissions: chown first, then chmod tree, then storage + php-sessions so 775 is not lost
+RUN mkdir -p /var/www/html/storage/php-sessions \
+    && chown -R www-data:www-data /var/www/html \
     && chmod -R 755 /var/www/html \
+    && chmod -R 755 /var/www/html/storage \
+    && chmod 775 /var/www/html/storage/php-sessions \
     && chmod -R 775 /var/www/html/api/logs 2>/dev/null || true
 
 # Configure Apache to serve from root and handle .htaccess

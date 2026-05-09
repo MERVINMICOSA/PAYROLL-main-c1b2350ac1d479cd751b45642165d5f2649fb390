@@ -1,41 +1,13 @@
 <?php
 // api/period/set.php - Save a new period with overlap detection
 
-session_start();
+require_once __DIR__ . '/../core/bootstrap.php';
+require_once __DIR__ . '/../middleware/auth.php';
 
-// Allow both localhost and production origin
-$allowed_origins = array(
-    'http://localhost:5500',
-    'http://localhost:3000',
-    'http://localhost:8000',
-    'http://127.0.0.1:5500',
-    'https://philtech-payroll.onrender.com'
-);
-$origin = $_SERVER['HTTP_ORIGIN'] ?? '';
-if (in_array($origin, $allowed_origins)) {
-    header("Access-Control-Allow-Origin: $origin");
-}
-
-header("Content-Type: application/json");
-header("Access-Control-Allow-Credentials: true");
-header("Access-Control-Allow-Methods: POST, OPTIONS");
-header("Access-Control-Allow-Headers: Content-Type");
-
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-    http_response_code(200);
-    exit;
-}
-
-if (!isset($_SESSION['user_id'])) {
-    http_response_code(401);
-    echo json_encode(['error' => 'Unauthorized - Please log in']);
-    exit;
-}
-
-// Only superadmin and accountant can set payroll periods
+require_auth();
 requireRole(['superadmin', 'accountant']);
 
-$input = json_decode(file_get_contents("php://input"), true);
+$input = json_decode(file_get_contents('php://input'), true);
 $periodStart = $input['period_start'] ?? null;
 $periodEnd = $input['period_end'] ?? null;
 
@@ -58,7 +30,6 @@ if ($periodEnd < $periodStart) {
     exit;
 }
 
-require_once __DIR__ . '/../middleware/auth.php';
 require_once __DIR__ . '/../config/database.php';
 
 try {

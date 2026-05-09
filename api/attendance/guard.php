@@ -3,9 +3,9 @@
 // HARDENED GUARD ATTENDANCE API
 // ===============================
 
-require_once __DIR__ . '/../_bootstrap.php';
-bootstrapStartSession();
-bootstrapRequireAuth();
+require_once __DIR__ . '/../core/bootstrap.php';
+
+require_auth();
 
 function guardResponse($data, int $status = 200): void {
     if ($status >= 400) {
