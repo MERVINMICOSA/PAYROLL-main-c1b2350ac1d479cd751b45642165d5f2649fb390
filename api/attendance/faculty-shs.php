@@ -180,20 +180,20 @@ switch ($_SERVER['REQUEST_METHOD']) {
         // ===========================
         // SAFE CASTING
         // ===========================
-        $regularHours = (float)($input['regular_hours'] ?? 0);
-        $adminHours   = (float)($input['admin_hours'] ?? 0);
+        $regularHours = (float)($input['regular_hours'] ?? $input['regular_hrs'] ?? 0);
+        $adminHours   = (float)($input['admin_hours'] ?? $input['admin_hrs'] ?? 0);
 
         $sss = (float)($input['sss'] ?? 0);
         $philhealth = (float)($input['philhealth'] ?? 0);
         $pagibig = (float)($input['pagibig'] ?? 0);
-        $wtax = (float)($input['withholding_tax'] ?? 0);
+        $wtax = (float)($input['withholding_tax'] ?? $input['wtax'] ?? 0);
 
         $sssLoan = (float)($input['sss_loan'] ?? 0);
         $hdmfLoan = (float)($input['hdmf_loan'] ?? 0);
-        $cashAdvance = (float)($input['cash_advance'] ?? 0);
-        $atmDeposit = (float)($input['atm_deposit'] ?? 0);
+        $cashAdvance = (float)($input['cash_advance'] ?? $input['cash_adv'] ?? 0);
+        $atmDeposit = (float)($input['atm_deposit'] ?? $input['atm_dep'] ?? 0);
 
-        $marketingAllowance = (float)($input['marketing_allowance'] ?? 0);
+        $marketingAllowance = (float)($input['marketing_allowance'] ?? $input['marketing'] ?? 0);
 
         // ===========================
         // COMPUTATION (SAFE)

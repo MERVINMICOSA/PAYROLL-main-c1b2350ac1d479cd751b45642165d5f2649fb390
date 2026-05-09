@@ -1503,9 +1503,76 @@ if (config.hasDynamicDates) {
     await renderStaticTab(filteredEmployees, config);
 }
         }
+
+        function getRecordsFromResponse(tabId, response) {
+            if (Array.isArray(response)) return response;
+            if (!response || typeof response !== 'object') return [];
+
+            if (Array.isArray(response.data)) return response.data;
+            if (Array.isArray(response.records)) return response.records;
+
+            // If backend returns keyed object map, flatten values as best effort.
+            return Object.values(response).filter(v => v && typeof v === 'object');
+        }
+
+        function mapApiRecordToUi(tabId, record, extra = {}) {
+            if (!record || typeof record !== 'object') return {};
+
+            if (tabId === 'faculty-shs' || tabId === 'faculty-college') {
+                return {
+                    ...record,
+                    regular_hrs: Number(record.regular_hours ?? record.regular_hrs ?? 0),
+                    admin_hrs: Number(record.admin_hours ?? record.admin_hrs ?? 0),
+                    wtax: Number(record.withholding_tax ?? record.wtax ?? 0),
+                    cash_adv: Number(record.cash_advance ?? record.cash_adv ?? 0),
+                    atm_dep: Number(record.atm_deposit ?? record.atm_dep ?? 0),
+                    marketing: Number(record.marketing_allowance ?? record.marketing ?? 0)
+                };
+            }
+
+            if (tabId === 'admin-pay') {
+                return {
+                    ...record,
+                    admin_rate: Number(extra.global_rate ?? record.admin_rate ?? 0),
+                    admin_hours: Number(record.admin_hours ?? 0),
+                    total_pay: Number(record.total_pay ?? 0)
+                };
+            }
+
+            return record;
+        }
+
+        function mapUiPayloadToApi(tabId, payload) {
+            if (!payload || typeof payload !== 'object') return payload;
+
+            if (tabId === 'faculty-shs' || tabId === 'faculty-college') {
+                return {
+                    ...payload,
+                    regular_hours: payload.regular_hrs ?? 0,
+                    admin_hours: payload.admin_hrs ?? 0,
+                    withholding_tax: payload.wtax ?? 0,
+                    cash_advance: payload.cash_adv ?? 0,
+                    atm_deposit: payload.atm_dep ?? 0,
+                    marketing_allowance: payload.marketing ?? 0
+                };
+            }
+
+            if (tabId === 'admin-pay' && Object.prototype.hasOwnProperty.call(payload, 'admin_rate')) {
+                return {
+                    employee_id: payload.employee_id,
+                    period_start: payload.period_start,
+                    period_end: payload.period_end,
+                    admin_hours: payload.admin_hours ?? 0,
+                    global_rate: payload.admin_rate ?? 0
+                };
+            }
+
+            return payload;
+        }
         
         async function renderStaticTab(employees, config) {
     let savedData = {};
+    let responseMeta = {};
 
     try {
         const response = await apiCallWithRetry(
@@ -1515,25 +1582,15 @@ if (config.hasDynamicDates) {
                 credentials: 'include'
             }
         );
+        responseMeta = response;
+        const records = getRecordsFromResponse(currentTab, response).map(item => mapApiRecordToUi(currentTab, item, response));
 
-        // ✅ HARD SAFETY CHECK (prevents reduce crash)
-        if (Array.isArray(response)) {
-            savedData = response.reduce((acc, item) => {
-                if (item && item.employee_id) {
-                    acc[item.employee_id] = item;
-                }
-                return acc;
-            }, {});
-        } else if (response && typeof response === 'object') {
-            // If backend accidentally returns object instead of array
-            console.warn("API returned non-array:", response);
-
-            // try to recover safely if it's keyed object
-            savedData = response;
-        } else {
-            console.warn("Empty or invalid response:", response);
-            savedData = {};
-        }
+        savedData = records.reduce((acc, item) => {
+            if (item && item.employee_id) {
+                acc[item.employee_id] = item;
+            }
+            return acc;
+        }, {});
 
     } catch (error) {
         console.log("No existing data found or error loading:", error);
@@ -1548,7 +1605,7 @@ if (config.hasDynamicDates) {
             if (field === 'rate') {
                 row[field] = emp.rate_shs || emp.rate_college || 0;
             } else if (field === 'admin_rate') {
-                row[field] = record.admin_rate || 0;
+                row[field] = Number(record.admin_rate ?? responseMeta.global_rate ?? 0);
             } else {
                 row[field] = record[field] || 0;
             }
@@ -1610,8 +1667,9 @@ if (config.hasDynamicDates) {
                     method: 'GET',
                     credentials: 'include'
                 });
-                if (response) {
-                    savedData = response.reduce((acc, item) => {
+                const records = getRecordsFromResponse(currentTab, response);
+                if (records.length) {
+                    savedData = records.reduce((acc, item) => {
                         acc[item.employee_id] = item;
                         return acc;
                     }, {});
@@ -1888,7 +1946,8 @@ if (config.hasDynamicDates) {
         
         window.updateCellValue = async function(input, field) {
             const employeeId = input.dataset.employeeId;
-            const value = parseFloat(input.value) || 0;
+            const rawValue = input.value;
+            const value = field === 'subject' ? rawValue.trim() : (parseFloat(rawValue) || 0);
             
             input.style.backgroundColor = '#fff3cd';
     
@@ -1921,6 +1980,7 @@ if (config.hasDynamicDates) {
                         }
                     });
                 }
+                payload = mapUiPayloadToApi(currentTab, payload);
                 
                 const response = await fetch(`/api/attendance/${currentTab}.php`, {
                     method: 'POST',

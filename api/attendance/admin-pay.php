@@ -183,12 +183,15 @@ try {
                 }
 
                 setGlobalAdminRate($pdo, $rate);
-
-                echo json_encode([
-                    'success' => true,
-                    'global_rate' => $rate
-                ]);
-                exit;
+                // If this is only a global-rate update, return immediately.
+                // If employee payload is also present, continue and save row too.
+                if (empty($input['employee_id'])) {
+                    echo json_encode([
+                        'success' => true,
+                        'global_rate' => $rate
+                    ]);
+                    exit;
+                }
             }
 
             /* NORMAL PAYROLL UPDATE */
