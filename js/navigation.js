@@ -1,6 +1,8 @@
 // js/navigation.js - COMPLETE VERSION
 // ===========================
-// AUTH GUARD - Using Session-based auth (no localStorage)
+// AUTH GUARD - Session-based auth (NOT localStorage user objects)
+// checkAuth() / checkSession() always call GET /api/auth/session.php with credentials:'include'.
+// localStorage "payroll_session_state" is only for cross-tab logout signals, not proof of login.
 // ===========================
 
 const currentPageName = window.location.pathname.split('/').pop();

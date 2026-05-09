@@ -74,8 +74,9 @@ try {
     ];
     $_SESSION['login_time'] = time();
     
-    // Regenerate session ID to prevent session fixation
-    session_regenerate_id(true);
+    // Rotate session id without deleting the old session file immediately.
+    // Helps when the browser briefly keeps the pre-rotation cookie (common on mobile / proxies).
+    session_regenerate_id(false);
 
     $sessionUser = $_SESSION['user'];
     $newSessionId = session_id();

@@ -109,33 +109,25 @@ function bootstrapStartSession(): void {
         return;
     }
 
-    // First, use the same project session bootstrap used by auth endpoints.
-    // This keeps cookie/session behavior consistent across all APIs.
     $sessionBootstrap = __DIR__ . '/config/session-start.php';
     if (is_file($sessionBootstrap)) {
         require_once $sessionBootstrap;
-        if (session_status() === PHP_SESSION_ACTIVE) {
-            return;
-        }
     }
 
-    // Use the incoming session cookie directly; do not rely on session-start.php
-    // because it may fail when headers were already touched in some deployments.
-    $sessionName = session_name();
-    $incomingId = $_COOKIE[$sessionName] ?? $_COOKIE['PHPSESSID'] ?? '';
-    if ($incomingId !== '') {
-        @session_id($incomingId);
+    // If require_once skipped the file body (should not happen) or session_start failed:
+    if (session_status() !== PHP_SESSION_ACTIVE && function_exists('payroll_session_init')) {
+        payroll_session_init();
     }
-    @session_cache_limiter('');
-    $started = @session_start();
 
-    // Fallback path: if headers/output policy prevents cookie-based start,
-    // start session in id-only mode so we can still read server-side session data.
-    if (!$started || session_status() !== PHP_SESSION_ACTIVE) {
+    // Last resort: attach explicit session id from cookie (same name as payroll_session_init).
+    if (session_status() !== PHP_SESSION_ACTIVE) {
+        $incomingId = $_COOKIE['PHPSESSID'] ?? '';
         if ($incomingId !== '') {
+            session_name('PHPSESSID');
+            session_id($incomingId);
+            session_cache_limiter('');
             @ini_set('session.use_cookies', '0');
             @ini_set('session.use_only_cookies', '0');
-            @session_id($incomingId);
             @session_start();
         }
     }
