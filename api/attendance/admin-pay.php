@@ -25,6 +25,9 @@ $pdo->exec("
         UNIQUE(employee_id, period_start, period_end)
     )
 ");
+// Auto-migrate legacy schema where total_pay/admin_hours may be missing.
+$pdo->exec("ALTER TABLE attendance_admin_pay ADD COLUMN IF NOT EXISTS admin_hours DECIMAL(8,2) DEFAULT 0");
+$pdo->exec("ALTER TABLE attendance_admin_pay ADD COLUMN IF NOT EXISTS total_pay DECIMAL(12,2) DEFAULT 0");
 
 $pdo->exec("
     CREATE TABLE IF NOT EXISTS settings (

@@ -38,6 +38,14 @@ set_error_handler(function ($severity, $message, $file, $line) {
     if (!(error_reporting() & $severity)) {
         return false;
     }
+    // Keep runtime warnings/notices from crashing API flow.
+    $nonFatal = [
+        E_WARNING, E_NOTICE, E_USER_WARNING, E_USER_NOTICE,
+        E_DEPRECATED, E_USER_DEPRECATED, E_STRICT,
+    ];
+    if (in_array($severity, $nonFatal, true)) {
+        return false;
+    }
     throw new ErrorException($message, 0, $severity, $file, $line);
 });
 

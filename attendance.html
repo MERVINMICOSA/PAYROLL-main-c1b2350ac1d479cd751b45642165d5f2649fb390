@@ -1336,12 +1336,14 @@ try {
             const data = parsePossiblyContaminatedJson(rawText);
 
             if (!response.ok) {
-                const msg = data?.error || response.statusText || 'Request failed';
+                const detail = data?.details ? ` (${String(data.details).slice(0, 240)})` : '';
+                const msg = (data?.error || response.statusText || 'Request failed') + detail;
                 throw new Error(`HTTP ${response.status}: ${msg}`);
             }
 
             if (data && typeof data === 'object' && !Array.isArray(data) && data.error) {
-                throw new Error(data.error);
+                const detail = data?.details ? ` (${String(data.details).slice(0, 240)})` : '';
+                throw new Error(`${data.error}${detail}`);
             }
 
             return data;
