@@ -2,26 +2,9 @@
 // ===============================
 // SAFE SESSION START
 // ===============================
-if (isset($_COOKIE['PHPSESSID'])) {
-    session_id($_COOKIE['PHPSESSID']);
-}
-session_start();
-
-// ===============================
-// FORCE JSON OUTPUT ALWAYS
-// ===============================
-header("Content-Type: application/json; charset=utf-8");
-header("Access-Control-Allow-Origin: https://philtech-payroll.onrender.com");
-header("Access-Control-Allow-Credentials: true");
-header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
-header("Access-Control-Allow-Headers: Content-Type");
-
-// OPTIONS preflight
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-    http_response_code(200);
-    echo json_encode(["ok" => true]);
-    exit;
-}
+require_once __DIR__ . '/../_bootstrap.php';
+bootstrapStartSession();
+bootstrapRequireAuth();
 
 // ===============================
 // GLOBAL ERROR SAFETY (NO HTML OUTPUT)
@@ -31,61 +14,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
  * Converts uncaught exceptions into a safe JSON 500 response.
  */
 set_exception_handler(function($e) {
-    http_response_code(500);
-    echo json_encode([
-        "error" => "Server error",
-        "message" => $e->getMessage()
-    ]);
-    exit;
+    jsonError('Server error', 500, $e->getMessage());
 });
-
-// ===============================
-// AUTH CHECK
-// ===============================
-if (!isset($_SESSION['user_id'])) {
-    http_response_code(401);
-    echo json_encode([
-        "error" => "Unauthorized"
-    ]);
-    exit;
-}
 
 // ===============================
 // DATABASE SAFETY CHECK
 // ===============================
-$databaseUrl = getenv('DATABASE_URL');
-
-if (!$databaseUrl) {
-    http_response_code(500);
-    echo json_encode([
-        "error" => "Database not configured"
-    ]);
-    exit;
-}
-
-$db = parse_url($databaseUrl);
-
-if (!$db || empty($db['host']) || empty($db['user']) || empty($db['path'])) {
-    http_response_code(500);
-    echo json_encode([
-        "error" => "Invalid database configuration"
-    ]);
-    exit;
-}
-
 try {
-    $host = $db['host'];
-    $port = $db['port'] ?? '5432';
-    $user = $db['user'];
-    $pass = $db['pass'];
-    $dbname = ltrim($db['path'], '/');
-
-    $dsn = "pgsql:host=$host;port=$port;dbname=$dbname;sslmode=require";
-
-    $pdo = new PDO($dsn, $user, $pass, [
-        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC
-    ]);
+    $pdo = bootstrapGetPdo('require');
 
     // ===============================
     // SAFE TABLE CREATION
@@ -165,9 +101,7 @@ try {
             $input = json_decode(file_get_contents("php://input"), true);
 
             if (!$input) {
-                http_response_code(400);
-                echo json_encode(["error" => "Invalid JSON input"]);
-                exit;
+                jsonError('Invalid JSON input', 400);
             }
 
             $employeeId = $input['employee_id'] ?? null;
@@ -175,9 +109,7 @@ try {
             $periodEnd = $input['period_end'] ?? null;
 
             if (!$employeeId || !$periodStart || !$periodEnd) {
-                http_response_code(400);
-                echo json_encode(["error" => "Missing required fields"]);
-                exit;
+                jsonError('Missing required fields', 400);
             }
 
             $stmt = $pdo->prepare("
@@ -248,17 +180,9 @@ try {
         // INVALID METHOD
         // -------------------------
         default:
-            http_response_code(405);
-            echo json_encode([
-                "error" => "Method not allowed"
-            ]);
-            break;
+            jsonError('Method not allowed', 405);
     }
 
 } catch (PDOException $e) {
-    http_response_code(500);
-    echo json_encode([
-        "error" => "Database error",
-        "message" => $e->getMessage()
-    ]);
-} trait_exists
+    jsonError('Database error', 500, $e->getMessage());
+}

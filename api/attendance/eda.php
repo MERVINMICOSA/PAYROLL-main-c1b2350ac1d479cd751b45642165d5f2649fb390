@@ -2,58 +2,22 @@
 ini_set('display_errors', 0);
 error_reporting(E_ALL);
 
-header("Content-Type: application/json; charset=UTF-8");
-header("Access-Control-Allow-Origin: https://philtech-payroll.onrender.com");
-header("Access-Control-Allow-Credentials: true");
-header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
-header("Access-Control-Allow-Headers: Content-Type");
+require_once __DIR__ . '/../_bootstrap.php';
+bootstrapStartSession();
+bootstrapRequireAuth();
 
 function send_json($data, $code = 200) {
+    if ($code >= 400) {
+        $message = is_array($data) && isset($data['error']) ? (string)$data['error'] : 'Request failed';
+        jsonError($message, $code);
+    }
     http_response_code($code);
     echo json_encode($data);
     exit;
 }
 
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-    http_response_code(204);
-    exit;
-}
-
-if (!isset($_SESSION)) {
-    session_start();
-}
-
-if (!isset($_SESSION['user_id'])) {
-    send_json(['error' => 'Unauthorized'], 401);
-}
-
-$databaseUrl = getenv('DATABASE_URL');
-if (!$databaseUrl) {
-    send_json(['error' => 'Database not configured'], 500);
-}
-
 try {
-    $db = parse_url($databaseUrl);
-
-    if (!$db || empty($db['host']) || empty($db['user']) || empty($db['path'])) {
-        send_json(['error' => 'Invalid database config'], 500);
-    }
-
-    $host = $db['host'];
-    $port = $db['port'] ?? '5432';
-    $user = $db['user'];
-    $pass = $db['pass'] ?? '';
-    $dbname = ltrim($db['path'], '/');
-
-    $pdo = new PDO(
-        "pgsql:host=$host;port=$port;dbname=$dbname;sslmode=require",
-        $user,
-        $pass,
-        [
-            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC
-        ]
-    );
+    $pdo = bootstrapGetPdo('require');
 
     $pdo->exec("
         CREATE TABLE IF NOT EXISTS attendance_eda (
@@ -168,4 +132,3 @@ try {
 } catch (Exception $e) {
     send_json(['error' => 'Server error'], 500);
 }
-?>

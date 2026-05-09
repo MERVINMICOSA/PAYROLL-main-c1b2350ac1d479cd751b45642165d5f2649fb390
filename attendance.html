@@ -1278,6 +1278,48 @@ try {
             }, 5000);
         }
 
+      function parsePossiblyContaminatedJson(rawText) {
+    if (!rawText || rawText.trim() === '') {
+        throw new Error('Empty response from server');
+    }
+
+    // Fast path for clean JSON responses.
+    try {
+        return JSON.parse(rawText);
+    } catch (_) {
+        // Continue to fallback parser.
+    }
+
+    // Fallback: extract JSON body when PHP warnings/HTML are printed before it.
+    const trimmed = rawText.trim();
+    const candidates = [];
+    const firstObject = trimmed.indexOf('{');
+    const firstArray = trimmed.indexOf('[');
+    const firstObjectOrArray = [firstObject, firstArray]
+        .filter(i => i >= 0)
+        .sort((a, b) => a - b)[0];
+
+    if (firstObjectOrArray !== undefined) {
+        candidates.push(trimmed.slice(firstObjectOrArray));
+    }
+
+    // Common case for warnings + trailing JSON object.
+    const lastObjectStart = trimmed.lastIndexOf('{');
+    if (lastObjectStart >= 0) {
+        candidates.push(trimmed.slice(lastObjectStart));
+    }
+
+    for (const candidate of candidates) {
+        try {
+            return JSON.parse(candidate);
+        } catch (_) {
+            // Keep trying candidates.
+        }
+    }
+
+    throw new Error(`Invalid JSON response from server. First bytes: ${trimmed.slice(0, 180)}`);
+}
+
       async function apiCallWithRetry(url, options = {}, retries = 2) {
     options.credentials = 'include';
 
@@ -1285,40 +1327,24 @@ try {
         try {
             const response = await fetch(url, options);
 
-            // Handle auth failure immediately
             if (response.status === 401) {
                 console.log("API returned 401 - session expired");
                 throw new Error('Session expired');
             }
 
             const rawText = await response.text();
+            const data = parsePossiblyContaminatedJson(rawText);
 
-            // Handle completely empty responses
-            if (!rawText || rawText.trim() === '') {
-                throw new Error('Empty response from server');
-            }
-
-            let data;
-
-            try {
-                data = JSON.parse(rawText);
-            } catch (e) {
-                console.error("NON-JSON RESPONSE FROM:", url);
-                console.error("RAW RESPONSE:", rawText);
-
-                throw new Error(
-                    `Invalid JSON response from server. First bytes: ${rawText.slice(0, 150)}`
-                );
-            }
-
-            // Handle HTTP errors AFTER parsing JSON (so backend error messages are usable)
             if (!response.ok) {
                 const msg = data?.error || response.statusText || 'Request failed';
                 throw new Error(`HTTP ${response.status}: ${msg}`);
             }
 
-            return data;
+            if (data && typeof data === 'object' && !Array.isArray(data) && data.error) {
+                throw new Error(data.error);
+            }
 
+            return data;
         } catch (error) {
             console.warn(`API attempt ${i + 1} failed:`, error.message);
 
@@ -1327,7 +1353,6 @@ try {
                 throw error;
             }
 
-            // Exponential backoff (better than fixed 1s retry)
             await new Promise(resolve => setTimeout(resolve, 800 * (i + 1)));
         }
     }

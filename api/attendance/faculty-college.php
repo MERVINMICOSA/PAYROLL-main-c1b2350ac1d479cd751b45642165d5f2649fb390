@@ -1,79 +1,14 @@
 <?php
 declare(strict_types=1);
 
-// ===========================
-// SESSION SAFE INIT
-// ===========================
-if (isset($_COOKIE['PHPSESSID'])) {
-    session_id($_COOKIE['PHPSESSID']);
-}
-session_start();
-
-// ===========================
-// HEADERS
-// ===========================
-header("Content-Type: application/json; charset=UTF-8");
-header("Access-Control-Allow-Origin: https://philtech-payroll.onrender.com");
-header("Access-Control-Allow-Credentials: true");
-header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
-header("Access-Control-Allow-Headers: Content-Type");
-
-// ===========================
-// PRE-FLIGHT
-// ===========================
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-    http_response_code(200);
-    exit;
-}
-
-// ===========================
-// AUTH CHECK (HARDENED)
-// ===========================
-if (empty($_SESSION['user_id'])) {
-    http_response_code(401);
-    echo json_encode([
-        'success' => false,
-        'error' => 'Unauthorized'
-    ]);
-    exit;
-}
+require_once __DIR__ . '/../_bootstrap.php';
+bootstrapStartSession();
+bootstrapRequireAuth();
 
 // ===========================
 // DATABASE SAFE INIT
 // ===========================
-$databaseUrl = getenv('DATABASE_URL');
-
-if (!$databaseUrl) {
-    http_response_code(500);
-    echo json_encode(['error' => 'Database not configured']);
-    exit;
-}
-
-$db = parse_url($databaseUrl);
-
-if (!$db || !isset($db['host'], $db['user'], $db['pass'], $db['path'])) {
-    http_response_code(500);
-    echo json_encode(['error' => 'Invalid database URL']);
-    exit;
-}
-
-$host = $db['host'];
-$port = $db['port'] ?? '5432';
-$user = $db['user'];
-$pass = $db['pass'];
-$dbname = ltrim($db['path'], '/');
-
-try {
-    $dsn = "pgsql:host=$host;port=$port;dbname=$dbname;sslmode=require";
-    $pdo = new PDO($dsn, $user, $pass, [
-        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC
-    ]);
-} catch (Exception $e) {
-    http_response_code(500);
-    echo json_encode(['error' => 'Database connection failed']);
-    exit;
-}
+$pdo = bootstrapGetPdo('require');
 
 // ===========================
 // TABLE INIT
@@ -147,8 +82,7 @@ switch ($_SERVER['REQUEST_METHOD']) {
             ]);
 
         } catch (Exception $e) {
-            http_response_code(500);
-            echo json_encode(['error' => 'Failed to fetch records']);
+            jsonError('Failed to fetch records', 500, $e->getMessage());
         }
 
         break;
@@ -163,9 +97,7 @@ switch ($_SERVER['REQUEST_METHOD']) {
         $periodEnd = $input['period_end'] ?? null;
 
         if (!$employeeId || !$periodStart || !$periodEnd) {
-            http_response_code(400);
-            echo json_encode(['error' => 'Missing required fields']);
-            exit;
+            jsonError('Missing required fields', 400);
         }
 
         // ===========================
@@ -288,10 +220,8 @@ switch ($_SERVER['REQUEST_METHOD']) {
             ]);
 
         } catch (Exception $e) {
-            http_response_code(500);
-            echo json_encode(['error' => 'Database operation failed']);
+            jsonError('Database operation failed', 500, $e->getMessage());
         }
 
         break;
 }
-?>

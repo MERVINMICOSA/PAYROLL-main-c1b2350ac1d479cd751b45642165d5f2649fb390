@@ -1,57 +1,10 @@
 ﻿<?php
 
-if (isset($_COOKIE['PHPSESSID'])) {
-    session_id($_COOKIE['PHPSESSID']);
-}
-session_start();
+require_once __DIR__ . '/../_bootstrap.php';
+bootstrapStartSession();
+bootstrapRequireAuth();
 
-header("Content-Type: application/json; charset=UTF-8");
-header("Access-Control-Allow-Origin: https://philtech-payroll.onrender.com");
-header("Access-Control-Allow-Credentials: true");
-header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
-header("Access-Control-Allow-Headers: Content-Type");
-
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-    http_response_code(204);
-    exit;
-}
-
-if (empty($_SESSION['user_id'])) {
-    http_response_code(401);
-    echo json_encode(['error' => 'Unauthorized']);
-    exit;
-}
-
-try {
-    $databaseUrl = getenv('DATABASE_URL');
-    if (!$databaseUrl) {
-        throw new Exception("Missing DATABASE_URL");
-    }
-
-    $db = parse_url($databaseUrl);
-
-    $host = $db['host'] ?? '';
-    $port = $db['port'] ?? '5432';
-    $user = $db['user'] ?? '';
-    $pass = $db['pass'] ?? '';
-    $dbname = isset($db['path']) ? ltrim($db['path'], '/') : '';
-
-    if (!$host || !$user || !$dbname) {
-        throw new Exception("Invalid database configuration");
-    }
-
-    $dsn = "pgsql:host=$host;port=$port;dbname=$dbname";
-
-    $pdo = new PDO($dsn, $user, $pass, [
-        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-        PDO::ATTR_EMULATE_PREPARES => false
-    ]);
-} catch (Exception $e) {
-    http_response_code(500);
-    echo json_encode(['error' => 'Database connection failed']);
-    exit;
-}
+$pdo = bootstrapGetPdo('');
 
 $pdo->exec("
     CREATE TABLE IF NOT EXISTS attendance_college_dtr (
@@ -130,9 +83,7 @@ try {
             }
 
             if (!$employeeId || !$periodStart || !$periodEnd || !$date || $hours === null || $hours < 0) {
-                http_response_code(400);
-                echo json_encode(['error' => 'Invalid input']);
-                exit;
+                jsonError('Invalid input', 400);
             }
 
             $stmt = $pdo->prepare("
@@ -191,14 +142,8 @@ try {
             break;
 
         default:
-            http_response_code(405);
-            echo json_encode(['error' => 'Method not allowed']);
-            break;
+            jsonError('Method not allowed', 405);
     }
 } catch (Throwable $e) {
-    http_response_code(500);
-    echo json_encode([
-        'error' => 'Server error'
-    ]);
+    jsonError('Server error', 500, $e->getMessage());
 }
-?>

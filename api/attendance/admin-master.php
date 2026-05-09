@@ -4,64 +4,13 @@
  * ADMIN MASTER ATTENDANCE API (HARDENED)
  */
 
-if (isset($_COOKIE['PHPSESSID'])) {
-    session_id($_COOKIE['PHPSESSID']);
-}
-session_start();
-
-/* ---------------- SECURITY HEADERS ---------------- */
-header("Content-Type: application/json; charset=utf-8");
-header("Access-Control-Allow-Origin: https://philtech-payroll.onrender.com");
-header("Access-Control-Allow-Credentials: true");
-header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
-header("Access-Control-Allow-Headers: Content-Type, Authorization");
-header("X-Content-Type-Options: nosniff");
-header("X-Frame-Options: DENY");
-header("Referrer-Policy: no-referrer");
-
-/* ---------------- PRE-FLIGHT ---------------- */
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-    http_response_code(204);
-    exit;
-}
-
-/* ---------------- AUTH CHECK ---------------- */
-if (empty($_SESSION['user_id'])) {
-    http_response_code(401);
-    echo json_encode(['error' => 'Unauthorized']);
-    exit;
-}
+require_once __DIR__ . '/../_bootstrap.php';
+bootstrapStartSession();
+bootstrapRequireAuth();
 
 /* ---------------- DB CONNECTION ---------------- */
-$databaseUrl = getenv('DATABASE_URL');
-if (!$databaseUrl) {
-    http_response_code(500);
-    echo json_encode(['error' => 'Missing DATABASE_URL']);
-    exit;
-}
-
 try {
-    $db = parse_url($databaseUrl);
-
-    if (!$db || !isset($db['host'], $db['user'], $db['pass'], $db['path'])) {
-        throw new Exception("Invalid DATABASE_URL");
-    }
-
-    $host = $db['host'];
-    $port = $db['port'] ?? '5432';
-    $user = $db['user'];
-    $pass = $db['pass'];
-    $dbname = ltrim($db['path'], '/');
-
-    $pdo = new PDO(
-        "pgsql:host=$host;port=$port;dbname=$dbname;sslmode=require",
-        $user,
-        $pass,
-        [
-            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-        ]
-    );
+    $pdo = bootstrapGetPdo('require');
 
     /* ---------------- TABLE ---------------- */
     $pdo->exec("
@@ -129,9 +78,7 @@ try {
         $periodEnd = $_GET['period_end'] ?? null;
 
         if (!$periodStart || !$periodEnd) {
-            http_response_code(400);
-            echo json_encode(['error' => 'Missing period_start or period_end']);
-            exit;
+            jsonError('Missing period_start or period_end', 400);
         }
 
         $hasStatusColumn = tableHasColumn($pdo, 'attendance_eda', 'status');
@@ -212,9 +159,7 @@ try {
         $input = json_decode(file_get_contents("php://input"), true);
 
         if (!is_array($input)) {
-            http_response_code(400);
-            echo json_encode(['error' => 'Invalid JSON body']);
-            exit;
+            jsonError('Invalid JSON body', 400);
         }
 
         $employeeId = trim((string)($input['employee_id'] ?? ''));
@@ -222,9 +167,7 @@ try {
         $periodEnd = $input['period_end'] ?? '';
 
         if ($employeeId === '' || !$periodStart || !$periodEnd) {
-            http_response_code(400);
-            echo json_encode(['error' => 'Missing required fields']);
-            exit;
+            jsonError('Missing required fields', 400);
         }
 
         // sanitize inputs
@@ -317,13 +260,8 @@ try {
         exit;
     }
 
-    http_response_code(405);
-    echo json_encode(['error' => 'Method not allowed']);
+    jsonError('Method not allowed', 405);
 
 } catch (Throwable $e) {
-    http_response_code(500);
-    echo json_encode([
-        'error' => 'Server error',
-        'message' => $e->getMessage()
-    ]);
+    jsonError('Server error', 500, $e->getMessage());
 }

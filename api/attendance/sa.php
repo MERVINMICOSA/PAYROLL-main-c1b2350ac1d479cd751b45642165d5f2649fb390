@@ -3,44 +3,17 @@
 // HARDENED SA ATTENDANCE API
 // ===============================
 
-if (isset($_COOKIE['PHPSESSID'])) {
-    session_id($_COOKIE['PHPSESSID']);
-}
-session_start();
+require_once __DIR__ . '/../_bootstrap.php';
+bootstrapStartSession();
+bootstrapRequireAuth();
 
-header("Content-Type: application/json");
-header("Access-Control-Allow-Origin: https://philtech-payroll.onrender.com");
-header("Access-Control-Allow-Credentials: true");
-header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
-
-// ===============================
-// SAFE OPTIONS HANDLER
-// ===============================
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-    http_response_code(200);
-    echo json_encode(["success" => true]);
-    exit;
-}
-
-// ===============================
-// AUTH CHECK (HARDENED)
-// ===============================
-if (!isset($_SESSION['user_id'])) {
-    http_response_code(401);
-    echo json_encode([]); // ALWAYS ARRAY SAFE FOR FRONTEND
-    exit;
-}
-
-// ===============================
-// SAFE JSON RESPONSE HELPER
-// ===============================
-/*
- * json_response
- * Sends a JSON payload and stops execution.
- * Used as the single response helper for the SA attendance API.
- */
-function json_response($data, $code = 200) {
-    http_response_code($code);
+function saResponse($data, int $status = 200): void {
+    if ($status >= 400) {
+        $message = is_array($data) && isset($data['error']) ? (string)$data['error'] : 'Request failed';
+        $details = is_array($data) && isset($data['details']) ? $data['details'] : null;
+        jsonError($message, $status, $details);
+    }
+    http_response_code($status);
     echo json_encode($data);
     exit;
 }
@@ -48,34 +21,7 @@ function json_response($data, $code = 200) {
 // ===============================
 // DATABASE SAFE INIT
 // ===============================
-$databaseUrl = getenv('DATABASE_URL');
-
-if (!$databaseUrl) {
-    json_response([]);
-}
-
-$db = parse_url($databaseUrl);
-
-if (
-    !$db ||
-    !isset($db['host'], $db['user'], $db['pass'], $db['path'])
-) {
-    json_response([]);
-}
-
-$host = $db['host'];
-$port = $db['port'] ?? '5432';
-$user = $db['user'];
-$pass = $db['pass'];
-$dbname = ltrim($db['path'], '/');
-
-try {
-    $dsn = "pgsql:host=$host;port=$port;dbname=$dbname;sslmode=require";
-    $pdo = new PDO($dsn, $user, $pass);
-    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-} catch (Exception $e) {
-    json_response([]);
-}
+$pdo = bootstrapGetPdo('require');
 
 // ===============================
 // TABLE CREATION (SAFE)
@@ -148,10 +94,10 @@ switch ($_SERVER['REQUEST_METHOD']) {
                 ];
             }
 
-            json_response($transformed);
+            saResponse($transformed);
 
         } catch (Exception $e) {
-            json_response([]);
+            saResponse([]);
         }
 
         break;
@@ -161,10 +107,10 @@ switch ($_SERVER['REQUEST_METHOD']) {
     // ===========================
     case 'POST':
 
-        $input = json_decode(file_get_contents("php://input"), true);
+        $input = bootstrapJsonInput();
 
         if (!is_array($input)) {
-            json_response(["success" => false]);
+            saResponse(["success" => false]);
         }
 
         $employeeId = $input['employee_id'] ?? null;
@@ -172,7 +118,7 @@ switch ($_SERVER['REQUEST_METHOD']) {
         $periodEnd = $input['period_end'] ?? null;
 
         if (!$employeeId || !$periodStart || !$periodEnd) {
-            json_response(["success" => false]);
+            saResponse(["success" => false]);
         }
 
         try {
@@ -223,7 +169,7 @@ switch ($_SERVER['REQUEST_METHOD']) {
                     ]);
                 }
 
-                json_response(["success" => true]);
+                saResponse(["success" => true]);
             }
 
             // ===========================
@@ -233,7 +179,7 @@ switch ($_SERVER['REQUEST_METHOD']) {
             $present = $input['present'] ?? 0;
 
             if (!$date) {
-                json_response(["success" => false]);
+                saResponse(["success" => false]);
             }
 
             $stmt = $pdo->prepare("
@@ -304,15 +250,14 @@ switch ($_SERVER['REQUEST_METHOD']) {
                 ]);
             }
 
-            json_response(["success" => true]);
+            saResponse(["success" => true]);
 
         } catch (Exception $e) {
-            json_response(["success" => false]);
+            saResponse(["error" => "Database operation failed", "details" => $e->getMessage()], 500);
         }
 
         break;
 
     default:
-        json_response([]);
+        saResponse(["error" => "Method not allowed"], 405);
 }
-?>
