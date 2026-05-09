@@ -32,20 +32,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 
 // Convert ALL PHP errors into exceptions
 set_error_handler(function ($severity, $message, $file, $line) {
+    // Respect @-suppressed errors and current reporting level.
+    if (!(error_reporting() & $severity)) {
+        return false;
+    }
     throw new ErrorException($message, 0, $severity, $file, $line);
 });
 
 // Catch fatal errors too
 register_shutdown_function(function () {
     $error = error_get_last();
-    if ($error) {
-        http_response_code(500);
-        echo json_encode([
-            "success" => false,
-            "error" => "Fatal error",
-            "details" => $error["message"]
-        ]);
+    if (!$error) {
+        return;
     }
+
+    // Only treat truly fatal engine errors as fatal JSON responses.
+    $fatalTypes = [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR, E_USER_ERROR];
+    if (!in_array($error['type'], $fatalTypes, true)) {
+        return;
+    }
+
+    if (!headers_sent()) {
+        http_response_code(500);
+        header("Content-Type: application/json; charset=utf-8");
+    }
+
+    echo json_encode([
+        "success" => false,
+        "error" => "Fatal error",
+        "details" => $error["message"]
+    ]);
 });
 
 // Safe JSON responder
