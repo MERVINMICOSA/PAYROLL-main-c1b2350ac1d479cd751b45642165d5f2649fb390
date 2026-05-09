@@ -126,8 +126,19 @@ function bootstrapStartSession(): void {
 }
 
 function bootstrapRequireAuth(): void {
-    if (!isset($_SESSION['user_id'])) {
-        jsonError('Unauthorized', 401);
+    // Normalize session shape used across legacy/new endpoints.
+    if (!isset($_SESSION['user_id']) && isset($_SESSION['user']) && is_array($_SESSION['user']) && isset($_SESSION['user']['id'])) {
+        $_SESSION['user_id'] = $_SESSION['user']['id'];
+    }
+
+    if (!isset($_SESSION['user_id']) && !isset($_SESSION['user'])) {
+        jsonError('Unauthorized', 401, [
+            'session_id' => session_id(),
+            'session_status' => session_status(),
+            'has_cookie' => isset($_COOKIE['PHPSESSID']),
+            'cookie_len' => isset($_COOKIE['PHPSESSID']) ? strlen((string)$_COOKIE['PHPSESSID']) : 0,
+            'session_keys' => array_keys($_SESSION ?? []),
+        ]);
     }
 }
 
