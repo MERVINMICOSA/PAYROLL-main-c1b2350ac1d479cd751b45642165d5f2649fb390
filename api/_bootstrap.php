@@ -109,6 +109,16 @@ function bootstrapStartSession(): void {
         return;
     }
 
+    // First, use the same project session bootstrap used by auth endpoints.
+    // This keeps cookie/session behavior consistent across all APIs.
+    $sessionBootstrap = __DIR__ . '/config/session-start.php';
+    if (is_file($sessionBootstrap)) {
+        require_once $sessionBootstrap;
+        if (session_status() === PHP_SESSION_ACTIVE) {
+            return;
+        }
+    }
+
     // Use the incoming session cookie directly; do not rely on session-start.php
     // because it may fail when headers were already touched in some deployments.
     $sessionName = session_name();
@@ -117,7 +127,18 @@ function bootstrapStartSession(): void {
         @session_id($incomingId);
     }
     @session_cache_limiter('');
-    @session_start();
+    $started = @session_start();
+
+    // Fallback path: if headers/output policy prevents cookie-based start,
+    // start session in id-only mode so we can still read server-side session data.
+    if (!$started || session_status() !== PHP_SESSION_ACTIVE) {
+        if ($incomingId !== '') {
+            @ini_set('session.use_cookies', '0');
+            @ini_set('session.use_only_cookies', '0');
+            @session_id($incomingId);
+            @session_start();
+        }
+    }
 }
 
 function bootstrapRequireAuth(): void {
@@ -135,6 +156,7 @@ function bootstrapRequireAuth(): void {
                 : 'No session cookie sent with this API request — use the same origin as login, or SameSite cookie settings blocked the cookie.',
             'session_id' => session_id(),
             'session_status' => session_status(),
+            'session_active' => session_status() === PHP_SESSION_ACTIVE,
             'cookie_name' => session_name(),
             'cookie_session_name_present' => isset($_COOKIE[session_name()]),
             'cookie_php_sessid_present' => isset($_COOKIE['PHPSESSID']),
