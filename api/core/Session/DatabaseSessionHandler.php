@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 final class DatabaseSessionHandler implements SessionHandlerInterface
 {
+    private const DEFAULT_LAST_ACTIVITY = 0;
+
+
     private PDO $pdo;
     private int $ttl;
 
