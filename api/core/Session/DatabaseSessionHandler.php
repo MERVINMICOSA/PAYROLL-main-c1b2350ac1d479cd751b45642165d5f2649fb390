@@ -51,12 +51,12 @@ final class DatabaseSessionHandler implements SessionHandlerInterface
         $stmt = $this->pdo->prepare(
             "INSERT INTO sessions (id, user_id, payload, last_activity, ip_address, user_agent, created_at)
              VALUES (:id, :user_id, :payload, :time, :ip, :ua, :created_at)
-             ON DUPLICATE KEY UPDATE
-                user_id = VALUES(user_id),
-                payload = VALUES(payload),
-                last_activity = VALUES(last_activity),
-                ip_address = VALUES(ip_address),
-                user_agent = VALUES(user_agent)"
+             ON CONFLICT (id) DO UPDATE SET
+                user_id = EXCLUDED.user_id,
+                payload = EXCLUDED.payload,
+                last_activity = EXCLUDED.last_activity,
+                ip_address = EXCLUDED.ip_address,
+                user_agent = EXCLUDED.user_agent"
         );
 
         $ok = $stmt->execute([

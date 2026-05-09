@@ -22,12 +22,13 @@ $statusLabels = [
     PHP_SESSION_ACTIVE => 'PHP_SESSION_ACTIVE',
 ];
 
-    $pdo = bootstrapGetPdo();
-    $sid = session_id();
+$pdo = bootstrapGetPdo();
+$sid = session_id();
 
-    $stmt = $pdo->prepare("SELECT id, user_id, last_activity, created_at FROM sessions WHERE id = :id");
-    $stmt->execute([':id' => $sid]);
-    $dbRow = $stmt->fetch(PDO::FETCH_ASSOC);
+$stmt = $pdo->prepare("SELECT id, user_id, last_activity, created_at FROM sessions WHERE id = :id");
+$stmt->execute([':id' => $sid]);
+$dbRow = $stmt->fetch(PDO::FETCH_ASSOC);
+
 
 jsonResponse([
     'session_id' => $sid,
