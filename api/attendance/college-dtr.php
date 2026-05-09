@@ -1,5 +1,4 @@
 ﻿<?php
-declare(strict_types=1);
 
 if (isset($_COOKIE['PHPSESSID'])) {
     session_id($_COOKIE['PHPSESSID']);

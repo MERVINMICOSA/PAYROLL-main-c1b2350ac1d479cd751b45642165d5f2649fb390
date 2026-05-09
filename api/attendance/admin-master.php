@@ -1,5 +1,4 @@
 <?php
-declare(strict_types=1);
 
 /**
  * ADMIN MASTER ATTENDANCE API (HARDENED)
@@ -108,6 +107,21 @@ try {
         return is_numeric($v) ? (float)$v : 0.0;
     }
 
+    function tableHasColumn(PDO $pdo, string $tableName, string $columnName): bool {
+        $stmt = $pdo->prepare("
+            SELECT 1
+            FROM information_schema.columns
+            WHERE table_name = :table
+              AND column_name = :column
+            LIMIT 1
+        ");
+        $stmt->execute([
+            ':table' => $tableName,
+            ':column' => $columnName
+        ]);
+        return (bool)$stmt->fetchColumn();
+    }
+
     /* ================= GET ================= */
     if ($_SERVER['REQUEST_METHOD'] === 'GET') {
 
@@ -120,13 +134,16 @@ try {
             exit;
         }
 
-        // Get EDA source
+        $hasStatusColumn = tableHasColumn($pdo, 'attendance_eda', 'status');
+        $statusFilterSql = $hasStatusColumn ? " AND status = 'active'" : "";
+
+        // Get EDA source (supports both old and new attendance_eda schemas)
         $stmt = $pdo->prepare("
             SELECT employee_id, lates, absences, overtime
             FROM attendance_eda
             WHERE period_start = :start
               AND period_end = :end
-              AND status = 'active'
+              {$statusFilterSql}
         ");
         $stmt->execute([
             ':start' => $periodStart,
