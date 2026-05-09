@@ -1320,6 +1320,20 @@ try {
     throw new Error(`Invalid JSON response from server. First bytes: ${trimmed.slice(0, 180)}`);
 }
 
+        function formatApiErrorDetails(details) {
+            if (details == null || details === '') {
+                return '';
+            }
+            try {
+                const text = typeof details === 'object'
+                    ? JSON.stringify(details)
+                    : String(details);
+                return text.length > 600 ? `${text.slice(0, 600)}…` : text;
+            } catch (e) {
+                return '(see console)';
+            }
+        }
+
       async function apiCallWithRetry(url, options = {}, retries = 2) {
     options.credentials = 'include';
 
@@ -1327,22 +1341,32 @@ try {
         try {
             const response = await fetch(url, options);
 
-            if (response.status === 401) {
-                console.log("API returned 401 - session expired");
-                throw new Error('Session expired');
-            }
-
             const rawText = await response.text();
             const data = parsePossiblyContaminatedJson(rawText);
 
+            if (response.status === 401) {
+                console.log('API returned 401 - session expired or missing auth');
+                const detail = formatApiErrorDetails(data?.details);
+                throw new Error('Session expired' + (detail ? ` ${detail}` : ''));
+            }
+
             if (!response.ok) {
-                const detail = data?.details ? ` (${String(data.details).slice(0, 240)})` : '';
+                const detailSuffix = formatApiErrorDetails(data?.details);
+                const detail = detailSuffix ? ` (${detailSuffix})` : '';
                 const msg = (data?.error || response.statusText || 'Request failed') + detail;
                 throw new Error(`HTTP ${response.status}: ${msg}`);
             }
 
+            // Some proxies/misconfigured PHP may send error bodies with HTTP 200
+            if (data && typeof data === 'object' && !Array.isArray(data) && data.success === false && data.error) {
+                const detailSuffix = formatApiErrorDetails(data.details);
+                const detail = detailSuffix ? ` (${detailSuffix})` : '';
+                throw new Error(`${data.error}${detail}`);
+            }
+
             if (data && typeof data === 'object' && !Array.isArray(data) && data.error) {
-                const detail = data?.details ? ` (${String(data.details).slice(0, 240)})` : '';
+                const detailSuffix = formatApiErrorDetails(data.details);
+                const detail = detailSuffix ? ` (${detailSuffix})` : '';
                 throw new Error(`${data.error}${detail}`);
             }
 

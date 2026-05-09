@@ -132,11 +132,18 @@ function bootstrapRequireAuth(): void {
     }
 
     if (!isset($_SESSION['user_id']) && !isset($_SESSION['user'])) {
+        $hasCookie = isset($_COOKIE[session_name()]) || isset($_COOKIE['PHPSESSID']);
         jsonError('Unauthorized', 401, [
+            'hint' => $hasCookie
+                ? 'Session cookie arrived but PHP session has no login data — try logging out and back in.'
+                : 'No session cookie sent with this API request — use the same origin as login, or SameSite cookie settings blocked the cookie.',
             'session_id' => session_id(),
             'session_status' => session_status(),
-            'has_cookie' => isset($_COOKIE['PHPSESSID']),
-            'cookie_len' => isset($_COOKIE['PHPSESSID']) ? strlen((string)$_COOKIE['PHPSESSID']) : 0,
+            'cookie_name' => session_name(),
+            'has_cookie' => $hasCookie,
+            'cookie_len' => isset($_COOKIE['PHPSESSID'])
+                ? strlen((string)$_COOKIE['PHPSESSID'])
+                : (isset($_COOKIE[session_name()]) ? strlen((string)$_COOKIE[session_name()]) : 0),
             'session_keys' => array_keys($_SESSION ?? []),
         ]);
     }
