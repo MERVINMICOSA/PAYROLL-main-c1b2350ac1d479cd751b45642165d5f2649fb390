@@ -15,16 +15,20 @@ CREATE TABLE IF NOT EXISTS users (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Sessions table for token-based authentication
+-- DB-backed PHP sessions (stable across instances)
 CREATE TABLE IF NOT EXISTS sessions (
-    id SERIAL PRIMARY KEY,
-    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    token VARCHAR(255) UNIQUE NOT NULL,
-    expires_at TIMESTAMP NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    ip_address VARCHAR(45),
-    user_agent TEXT
+    id VARCHAR(128) PRIMARY KEY,
+    user_id INT NULL,
+    payload TEXT NOT NULL,
+    last_activity INT NOT NULL,
+    ip_address VARCHAR(45) NULL,
+    user_agent TEXT NULL,
+    created_at INT NOT NULL
 );
+
+CREATE INDEX IF NOT EXISTS idx_sessions_last_activity ON sessions(last_activity);
+CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON sessions(user_id);
+
 
 -- Employees table
 CREATE TABLE IF NOT EXISTS employees (

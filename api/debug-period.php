@@ -1,7 +1,9 @@
 <?php
 // api/debug-period.php - Debug period settings
 
-session_start();
+require_once __DIR__ . '/core/bootstrap.php';
+
+
 
 $allowed_origins = array(
     'http://localhost:5500',

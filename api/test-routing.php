@@ -1,8 +1,8 @@
 <?php
 // api/test.php - Test endpoint to verify routing works
-session_start();
-
+require_once __DIR__ . '/core/bootstrap.php';
 header('Content-Type: application/json');
+
 header('Access-Control-Allow-Credentials: true');
 
 // Check if session is active

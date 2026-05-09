@@ -22,11 +22,12 @@ $statusLabels = [
     PHP_SESSION_ACTIVE => 'PHP_SESSION_ACTIVE',
 ];
 
-$savePath = session_save_path();
-$sid = session_id();
-$sessionFile = ($sid !== '' && $savePath !== '')
-    ? rtrim($savePath, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . 'sess_' . $sid
-    : '';
+    $pdo = bootstrapGetPdo();
+    $sid = session_id();
+
+    $stmt = $pdo->prepare("SELECT id, user_id, last_activity, created_at FROM sessions WHERE id = :id");
+    $stmt->execute([':id' => $sid]);
+    $dbRow = $stmt->fetch(PDO::FETCH_ASSOC);
 
 jsonResponse([
     'session_id' => $sid,
@@ -34,11 +35,11 @@ jsonResponse([
     'session_status_label' => $statusLabels[$status] ?? 'unknown',
     'session_data' => $_SESSION,
     'session_keys' => array_keys($_SESSION ?? []),
-    'save_path' => $savePath,
-    'save_path_writable' => $savePath !== '' && is_dir($savePath) && is_writable($savePath),
-    'session_file' => $sessionFile,
-    'session_file_exists' => $sessionFile !== '' && is_file($sessionFile),
+    'db_session_found' => (bool) $dbRow,
+    'db_last_activity' => $dbRow['last_activity'] ?? null,
+    'db_user_id' => $dbRow['user_id'] ?? null,
     'ini_session_save_path' => ini_get('session.save_path'),
+
     'cookie_name' => session_name(),
     'cookie_php_sessid_present' => isset($_COOKIE['PHPSESSID']),
     'cookie_len' => isset($_COOKIE['PHPSESSID']) ? strlen((string) $_COOKIE['PHPSESSID']) : 0,

@@ -1,6 +1,7 @@
 <?php
 // api/test-connection.php - Test database connection
-session_start();
+require_once __DIR__ . '/core/bootstrap.php';
+
 
 header("Content-Type: application/json");
 

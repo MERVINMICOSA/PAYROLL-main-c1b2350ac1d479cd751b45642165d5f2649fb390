@@ -3,6 +3,9 @@
 declare(strict_types=1);
 
 require_once dirname(__DIR__) . '/config/session-start.php';
+require_once __DIR__ . '/Session/DatabaseSessionHandler.php';
+require_once __DIR__ . '/database.php';
+
 
 function payroll_api_handle_options(): void
 {
@@ -21,17 +24,8 @@ function payroll_session_bootstrap(): void
         return;
     }
 
+    // Single entry point: payroll_session_init() + session_start() happen there.
+    // Do not start sessions anywhere else.
     payroll_session_init();
-
-    if (session_status() !== PHP_SESSION_ACTIVE) {
-        $incomingId = $_COOKIE['PHPSESSID'] ?? '';
-        if ($incomingId !== '') {
-            session_name('PHPSESSID');
-            session_id($incomingId);
-            session_cache_limiter('');
-            @ini_set('session.use_cookies', '0');
-            @ini_set('session.use_only_cookies', '0');
-            @session_start();
-        }
-    }
 }
+

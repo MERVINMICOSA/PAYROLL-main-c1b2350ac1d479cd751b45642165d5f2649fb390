@@ -10,6 +10,7 @@
  */
 function payroll_resolve_session_save_path(): string
 {
+
     $envRaw = getenv('SESSION_SAVE_PATH');
     if ($envRaw !== false && trim((string) $envRaw) !== '') {
         $env = trim((string) $envRaw);
@@ -52,9 +53,19 @@ function payroll_session_init(): void
         return;
     }
 
-    session_save_path(payroll_resolve_session_save_path());
+    // Hard contract: handler must be registered before session_start() every time.
+    if (headers_sent()) {
+        throw new RuntimeException('Invalid kernel usage: headers already sent before session init');
+    }
 
-    // Match the cookie name the browser sends (explicit > relying on ini defaults).
+
+    // DB-backed sessions (no filesystem dependency)
+    $pdo = bootstrapGetPdo();
+    $handler = new DatabaseSessionHandler($pdo);
+
+    session_set_save_handler($handler, true);
+
+    // Match the cookie name the browser sends.
     session_name('PHPSESSID');
 
     $cookieParams = session_get_cookie_params();
@@ -69,7 +80,11 @@ function payroll_session_init(): void
         'samesite' => 'Lax',
     ]);
 
-    if (!session_start()) {
-        error_log('payroll_session_init: session_start() failed');
+    if (session_status() === PHP_SESSION_NONE) {
+        if (!session_start()) {
+            error_log('payroll_session_init: session_start() failed');
+        }
     }
 }
+
+
