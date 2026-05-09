@@ -16,7 +16,10 @@ if (!defined('APP_BOOTSTRAPPED')) {
     require_once __DIR__ . '/auth.php';
     require_once __DIR__ . '/database.php';
 
+
+
     payroll_api_handle_options();
     payroll_session_bootstrap();
     bootstrapApplyHeaders();
 }
+
