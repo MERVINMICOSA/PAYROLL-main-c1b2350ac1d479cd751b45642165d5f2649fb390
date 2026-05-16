@@ -319,17 +319,17 @@ class AttendanceRouter {
                     'basic_pay' => round($basicPay, 2),
                     'overtime_pay' => round($overtimePay, 2),
                     'gross' => round($gross, 2),
-                    'sss' => $saved['sss'] ?? 0,
-                    'philhealth' => $saved['philhealth'] ?? 0,
-                    'pagibig' => $saved['pagibig'] ?? 0,
-                    'wtax' => $saved['withholding_tax'] ?? 0,
-                    'sss_loan' => $saved['sss_loan'] ?? 0,
-                    'hdmf_loan' => $saved['hdmf_loan'] ?? 0,
-                    'cash_adv' => $saved['cash_advance'] ?? 0,
-                    'atm_dep' => $saved['atm_deposit'] ?? 0,
-                    'transpo' => $saved['transpo_allowance'] ?? 0,
-                    'marketing' => $saved['marketing_allowance'] ?? 0,
-                    'net_pay' => $saved['net_pay'] ?? 0
+                    'sss' => round((float)($saved['sss'] ?? 0), 2),
+                    'philhealth' => round((float)($saved['philhealth'] ?? 0), 2),
+                    'pagibig' => round((float)($saved['pagibig'] ?? 0), 2),
+                    'wtax' => round((float)($saved['withholding_tax'] ?? 0), 2),
+                    'sss_loan' => round((float)($saved['sss_loan'] ?? 0), 2),
+                    'hdmf_loan' => round((float)($saved['hdmf_loan'] ?? 0), 2),
+                    'cash_adv' => round((float)($saved['cash_advance'] ?? 0), 2),
+                    'atm_dep' => round((float)($saved['atm_deposit'] ?? 0), 2),
+                    'transpo' => round((float)($saved['transpo_allowance'] ?? 0), 2),
+                    'marketing' => round((float)($saved['marketing_allowance'] ?? 0), 2),
+                    'net_pay' => round((float)($saved['net_pay'] ?? $gross), 2)
                 ];
             }
             echo json_encode($response);

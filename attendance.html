@@ -1686,21 +1686,22 @@ if (config.hasDynamicDates) {
         }
 
         if (config.fields.includes('net_pay')) {
-            const gross = row.gross || 0;
+            const gross = Number(row.gross) || 0;
 
-            const deductions =
-                (row.sss || 0) +
-                (row.philhealth || 0) +
-                (row.pagibig || 0) +
-                (row.wtax || 0) +
-                (row.sss_loan || 0) +
-                (row.hdmf_loan || 0) +
-                (row.cash_adv || 0) +
-                (row.atm_dep || 0);
+            const sss       = Number(row.sss) || 0;
+            const philhealth = Number(row.philhealth) || 0;
+            const pagibig   = Number(row.pagibig) || 0;
+            const wtax      = Number(row.wtax) || 0;
+            const sssLoan   = Number(row.sss_loan) || 0;
+            const hdmfLoan  = Number(row.hdmf_loan) || 0;
+            const cashAdv   = Number(row.cash_adv) || 0;
+            const atmDep    = Number(row.atm_dep) || 0;
 
-            const allowances =
-                (row.transpo || 0) +
-                (row.marketing || 0);
+            const transpo   = Number(row.transpo) || 0;
+            const marketing = Number(row.marketing) || 0;
+
+            const deductions   = sss + philhealth + pagibig + wtax + sssLoan + hdmfLoan + cashAdv + atmDep;
+            const allowances   = transpo + marketing;
 
             row.net_pay = gross - deductions + allowances;
         }
@@ -1868,12 +1869,13 @@ if (config.hasDynamicDates) {
                 config.fields.forEach((field, idx) => {
                     const isEditable = config.editable[idx];
                     const value = row[field] !== undefined ? row[field] : 0;
-                    const displayValue = field.includes('pay') || field === 'gross' || field === 'net_pay' ? 
-                        `₱${parseFloat(value).toLocaleString()}` : value;
+                    const numVal = Number(value) || 0;
+                    const isMonetary = field.includes('pay') || field === 'gross' || field === 'net_pay';
+                    const displayValue = isMonetary ? `₱${numVal.toLocaleString()}` : numVal.toLocaleString();
                     
                     if (isEditable) {
                         html += `<td class="editable-cell">
-                            <input type="number" step="0.01" value="${value}" 
+                            <input type="number" step="0.01" value="${numVal}" 
                                    data-employee-id="${row.id}" data-field="${field}"
                                    class="editable-input" onchange="updateCellValue(this, '${field}')">
                         </td>`;
