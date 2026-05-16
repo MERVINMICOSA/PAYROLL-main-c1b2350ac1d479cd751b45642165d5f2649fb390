@@ -1665,15 +1665,9 @@ if (config.hasDynamicDates) {
             } else if (field === 'admin_rate') {
                 row[field] = Number(record.admin_rate ?? responseMeta.global_rate ?? 0);
             } else {
-                row[field] = record[field] || 0;
+                row[field] = Number(record[field] ?? 0);
             }
         });
-
-        if (config.fields.includes('total')) {
-            row.total =
-                (row.mon || 0) + (row.tue || 0) + (row.wed || 0) +
-                (row.thu || 0) + (row.fri || 0) + (row.sat || 0) + (row.sun || 0);
-        }
 
         if (
             config.fields.includes('total_pay') &&
