@@ -661,7 +661,24 @@ class AttendanceRouter {
                 $stmt = $this->pdo->query("SELECT * FROM attendance_college_loading");
             }
 
-            echo json_encode(['success' => true, 'data' => $stmt->fetchAll()]);
+            $rows = $stmt->fetchAll();
+            $safe = [];
+            foreach ($rows as $row) {
+                $safe[] = [
+                    'employee_id' => $row['employee_id'] ?? '',
+                    'period_start' => $row['period_start'] ?? '',
+                    'period_end' => $row['period_end'] ?? '',
+                    'subject' => $row['subject'] ?? '',
+                    'mon' => (float)($row['mon'] ?? 0),
+                    'tue' => (float)($row['tue'] ?? 0),
+                    'wed' => (float)($row['wed'] ?? 0),
+                    'thu' => (float)($row['thu'] ?? 0),
+                    'fri' => (float)($row['fri'] ?? 0),
+                    'sat' => (float)($row['sat'] ?? 0),
+                    'sun' => (float)($row['sun'] ?? 0)
+                ];
+            }
+            echo json_encode(['success' => true, 'data' => $safe]);
         } elseif ($this->method === 'POST') {
             $employeeId = $this->input['employee_id'] ?? null;
             $periodStart = $this->input['period_start'] ?? null;
