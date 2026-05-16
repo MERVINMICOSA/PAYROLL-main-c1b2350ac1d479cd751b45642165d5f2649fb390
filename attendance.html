@@ -1336,6 +1336,13 @@ try {
 
       async function apiCallWithRetry(url, options = {}, retries = 2) {
     options.credentials = 'include';
+    
+    // Ensure headers include proper cache-busting for session freshness
+    if (!options.headers) {
+        options.headers = {};
+    }
+    options.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate';
+    options.headers['Pragma'] = 'no-cache';
 
     for (let i = 0; i <= retries; i++) {
         try {
@@ -1627,7 +1634,7 @@ if (config.hasDynamicDates) {
 
     try {
         const response = await apiCallWithRetry(
-            `/api/attendance/${currentTab}.php?period_start=${currentPeriod.start || ''}&period_end=${currentPeriod.end || ''}`,
+            `/api/attendance.php?type=${currentTab}&period_start=${currentPeriod.start || ''}&period_end=${currentPeriod.end || ''}`,
             {
                 method: 'GET',
                 credentials: 'include'
@@ -1714,7 +1721,7 @@ if (config.hasDynamicDates) {
             let savedData = {};
             
             try {
-                const response = await apiCallWithRetry(`/api/attendance/${currentTab}.php?period_start=${currentPeriod.start}&period_end=${currentPeriod.end}`, {
+                const response = await apiCallWithRetry(`/api/attendance.php?type=${currentTab}&period_start=${currentPeriod.start}&period_end=${currentPeriod.end}`, {
                     method: 'GET',
                     credentials: 'include'
                 });
@@ -2033,7 +2040,7 @@ if (config.hasDynamicDates) {
                 }
                 payload = mapUiPayloadToApi(currentTab, payload);
                 
-                const response = await fetch(`/api/attendance/${currentTab}.php`, {
+                const response = await fetch(`/api/attendance.php?type=${currentTab}`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     credentials: 'include',
@@ -2076,7 +2083,7 @@ if (config.hasDynamicDates) {
             document.body.appendChild(indicator);
             
             try {
-                const response = await fetch(`/api/attendance/${currentTab}.php`, {
+                const response = await fetch(`/api/attendance.php?type=${currentTab}`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -2123,7 +2130,7 @@ if (config.hasDynamicDates) {
             document.body.appendChild(indicator);
             
             try {
-                const response = await fetch(`/api/attendance/${currentTab}.php`, {
+                const response = await fetch(`/api/attendance.php?type=${currentTab}`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -2439,7 +2446,7 @@ if (config.hasDynamicDates) {
                     
                     for (const record of data.attendance) {
                         try {
-                            const response = await fetch(`/api/attendance/eda.php`, {
+                            const response = await fetch(`/api/attendance.php?type=eda`, {
                                 method: 'POST',
                                 headers: { 'Content-Type': 'application/json' },
                                 credentials: 'include',
