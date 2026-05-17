@@ -98,17 +98,39 @@
         .modal-backdrop.show {
             display: flex;
         }
+        .schedule-day-tabs {
+            display: grid;
+            grid-template-columns: repeat(7, minmax(96px, 1fr));
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+        .schedule-day-tab {
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            background: #ffffff;
+            padding: 10px 8px;
+            text-align: center;
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: #374151;
+        }
+        .schedule-day-tab.active {
+            border-color: #8a1f27;
+            background: #fff1f2;
+            color: #8a1f27;
+        }
         .schedule-grid {
             display: grid;
-            grid-template-columns: repeat(7, minmax(220px, 1fr));
-            gap: 12px;
-            min-width: 1540px;
+            grid-template-columns: 1fr;
         }
         .schedule-day-card {
             border: 1px solid #e5e7eb;
             border-radius: 8px;
             background: #ffffff;
             overflow: hidden;
+        }
+        .schedule-day-card.hidden {
+            display: none;
         }
         .schedule-day-header {
             background: #f9fafb;
@@ -299,6 +321,7 @@
                 <button type="button" id="closeScheduleModalBtn" class="text-gray-500 hover:text-gray-800 text-2xl leading-none">&times;</button>
             </div>
             <div class="p-5 overflow-x-auto overflow-y-auto">
+                <div id="scheduleDayTabs" class="schedule-day-tabs"></div>
                 <div id="scheduleFrameGrid" class="schedule-grid"></div>
             </div>
             <div class="flex justify-end gap-3 p-5 border-t border-gray-200 bg-gray-50">
@@ -333,6 +356,7 @@
         let teacherSearch = '';
         let teacherAssignmentFilter = 'all';
         let currentScheduleContext = null;
+        let selectedScheduleDay = 'mon';
         const scheduleDays = [
             { key: 'mon', label: 'Monday' },
             { key: 'tue', label: 'Tuesday' },
@@ -434,6 +458,12 @@
             const input = e.target.closest('input[type="time"]');
             if (!input) return;
             updateModalDayTotal(input.dataset.day);
+        });
+
+        document.getElementById('scheduleDayTabs').addEventListener('click', (e) => {
+            const tab = e.target.closest('[data-action="select-day"]');
+            if (!tab) return;
+            selectScheduleDay(tab.dataset.day);
         });
 
         document.getElementById('closeScheduleModalBtn').addEventListener('click', closeScheduleModal);
@@ -795,6 +825,7 @@
             document.getElementById('scheduleModalTitle').textContent = `Edit Schedule - ${teacher.full_name}`;
             document.getElementById('scheduleModalSubtitle').textContent =
                 `${levelLabel(level)} | ${assignmentLabel(teacher.assignment)} | ${currentPeriodStart} to ${currentPeriodEnd}`;
+            selectedScheduleDay = 'mon';
             renderScheduleFrameTable(loadScheduleFrames(employeeId, level));
             document.getElementById('scheduleModal').classList.add('show');
         }
@@ -805,8 +836,15 @@
         }
 
         function renderScheduleFrameTable(framesByDay) {
+            const tabs = scheduleDays.map(day => `
+                <button type="button" data-action="select-day" data-day="${day.key}" class="schedule-day-tab">
+                    ${day.label}
+                    <span class="block text-xs font-medium mt-1" data-tab-day-total="${day.key}">0.0 hrs</span>
+                </button>
+            `).join('');
+
             const cards = scheduleDays.map(day => `
-                <section class="schedule-day-card">
+                <section class="schedule-day-card" data-day-panel="${day.key}">
                     <div class="schedule-day-header">
                         <div>${day.label}</div>
                         <div class="text-xs text-[#8a1f27] mt-1">Hours: <span data-day-total="${day.key}">0.0</span></div>
@@ -820,6 +858,7 @@
                 </section>
             `).join('');
 
+            document.getElementById('scheduleDayTabs').innerHTML = tabs;
             document.getElementById('scheduleFrameGrid').innerHTML = cards;
 
             for (const day of scheduleDays) {
@@ -827,6 +866,20 @@
                 dayFrames.forEach(frame => addScheduleFrame(day.key, frame.start, frame.end, frame.subject, frame.room));
                 updateModalDayTotal(day.key);
             }
+
+            selectScheduleDay(selectedScheduleDay);
+        }
+
+        function selectScheduleDay(day) {
+            selectedScheduleDay = day;
+
+            document.querySelectorAll('[data-day-panel]').forEach(panel => {
+                panel.classList.toggle('hidden', panel.dataset.dayPanel !== day);
+            });
+
+            document.querySelectorAll('[data-action="select-day"]').forEach(tab => {
+                tab.classList.toggle('active', tab.dataset.day === day);
+            });
         }
 
         function addScheduleFrame(day, start = '', end = '', subject = '', room = '') {
@@ -888,6 +941,9 @@
                 total += getFrameHours(start, end);
             });
             totalCell.textContent = total.toFixed(1);
+
+            const tabTotal = document.querySelector(`[data-tab-day-total="${day}"]`);
+            if (tabTotal) tabTotal.textContent = `${total.toFixed(1)} hrs`;
         }
 
         function getFrameHours(start, end) {
