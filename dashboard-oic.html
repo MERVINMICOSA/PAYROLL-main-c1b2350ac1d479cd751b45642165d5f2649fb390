@@ -109,6 +109,11 @@
             85% { opacity: 1; transform: translateY(0); }
             100% { opacity: 0; transform: translateY(-20px); }
         }
+        @media (min-width: 768px) {
+            .period-controls {
+                grid-template-columns: minmax(220px, 1fr) 150px 150px auto;
+            }
+        }
     </style>
 </head>
 <body class="text-gray-700 antialiased min-h-screen">
@@ -164,8 +169,7 @@
             <div class="flex whitespace-nowrap" id="loadingTabs">
                 <div class="loading-tab active" data-level="shs">📚 SHS Faculty Loading</div>
                 <div class="loading-tab" data-level="college">🎓 College Faculty Loading</div>
-                <div class="loading-tab" data-level="period-hours">Set Hours by Period</div>
-                <div class="loading-tab" data-level="period-schedule">Edit Schedule by Period</div>
+                <div class="loading-tab" data-level="teachers-schedule">Teachers Schedule</div>
             </div>
         </div>
 
@@ -174,7 +178,7 @@
                 <h2 class="font-semibold text-gray-800" id="currentLevelTitle">SHS Faculty Loading</h2>
                 <span class="text-sm text-gray-500">Click any cell to edit - saves automatically</span>
             </div>
-            <div id="periodControls" class="mb-4 grid gap-3 md:grid-cols-[minmax(220px,1fr)_150px_150px_150px_auto] items-end bg-gray-50 rounded-lg p-4">
+            <div id="periodControls" class="period-controls mb-4 grid gap-3 items-end bg-gray-50 rounded-lg p-4">
                 <label class="text-sm font-medium text-gray-700">
                     Period
                     <select id="periodSelect" class="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[#b0303b]">
@@ -189,14 +193,22 @@
                     End
                     <input id="periodEndInput" type="date" class="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[#b0303b]">
                 </label>
+                <div class="text-sm text-gray-500" id="selectedPeriodInfo">No period selected</div>
+            </div>
+            <div id="scheduleFilters" class="hidden mb-4 grid gap-3 md:grid-cols-[minmax(220px,1fr)_220px] items-end bg-gray-50 rounded-lg p-4">
                 <label class="text-sm font-medium text-gray-700">
-                    Level
-                    <select id="periodLevelSelect" class="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[#b0303b]">
-                        <option value="shs">SHS</option>
-                        <option value="college">College</option>
+                    Search Teacher
+                    <input id="teacherSearchInput" type="search" placeholder="Search by teacher name" class="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[#b0303b]">
+                </label>
+                <label class="text-sm font-medium text-gray-700">
+                    Assignment
+                    <select id="teacherAssignmentFilter" class="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[#b0303b]">
+                        <option value="all">All teachers</option>
+                        <option value="shs_only">SHS only</option>
+                        <option value="college_only">College only</option>
+                        <option value="both">Both SHS and College</option>
                     </select>
                 </label>
-                <div class="text-sm text-gray-500" id="selectedPeriodInfo">No period selected</div>
             </div>
 
             <div id="loadingContainer" class="grid-container">
@@ -251,7 +263,8 @@
         let periodManager = null;
         let currentPeriodStart = '';
         let currentPeriodEnd = '';
-        let periodLevel = 'shs';
+        let teacherSearch = '';
+        let teacherAssignmentFilter = 'all';
 
         const user = JSON.parse(localStorage.getItem('user') || '{}');
         document.getElementById('userName').textContent = user.name || 'OIC Head';
@@ -307,8 +320,16 @@
             loadData();
         });
 
-        document.getElementById('periodLevelSelect').addEventListener('change', (e) => {
-            periodLevel = e.target.value;
+        document.getElementById('teacherSearchInput').addEventListener('input', (e) => {
+            teacherSearch = e.target.value.toLowerCase().trim();
+            if (renderTable()) {
+                document.getElementById('loadingMessage').classList.add('hidden');
+                document.getElementById('teacherTable').classList.remove('hidden');
+            }
+        });
+
+        document.getElementById('teacherAssignmentFilter').addEventListener('change', (e) => {
+            teacherAssignmentFilter = e.target.value;
             loadData();
         });
 
@@ -318,6 +339,7 @@
                 tab.classList.add('active');
                 currentLevel = tab.dataset.level;
                 document.getElementById('currentLevelTitle').textContent = getCurrentTitle();
+                updateScheduleFiltersVisibility();
                 loadData();
             });
         });
@@ -332,22 +354,25 @@
         }
 
         function isPeriodMode() {
-            return currentLevel === 'period-hours' || currentLevel === 'period-schedule';
+            return currentLevel === 'teachers-schedule';
+        }
+
+        function updateScheduleFiltersVisibility() {
+            document.getElementById('scheduleFilters').classList.toggle('hidden', !isPeriodMode());
         }
 
         function getCurrentTitle() {
             if (currentLevel === 'shs') return 'SHS Faculty Loading';
             if (currentLevel === 'college') return 'College Faculty Loading';
-            if (currentLevel === 'period-hours') return 'Set Required Hours by Period';
-            return 'Edit Schedule by Period';
+            return 'Teachers Schedule';
         }
 
         function activeLoadingLevel() {
-            return isPeriodMode() ? periodLevel : currentLevel;
+            return currentLevel;
         }
 
-        function getRateForTeacher(teacher) {
-            return activeLoadingLevel() === 'shs'
+        function getRateForTeacher(teacher, level = activeLoadingLevel()) {
+            return level === 'shs'
                 ? Number(teacher.rate_shs || 80)
                 : Number(teacher.rate_college || 85);
         }
@@ -406,19 +431,33 @@
 
         async function fetchPeriodLoads() {
             if (!currentPeriodStart || !currentPeriodEnd) return [];
-            const type = activeLoadingLevel() === 'shs' ? 'shs-loading' : 'college-loading';
+
+            if (isPeriodMode()) {
+                const [shsLoads, collegeLoads] = await Promise.all([
+                    fetchLoadsByLevel('shs'),
+                    fetchLoadsByLevel('college')
+                ]);
+                return [...shsLoads, ...collegeLoads];
+            }
+
+            return fetchLoadsByLevel(activeLoadingLevel());
+        }
+
+        async function fetchLoadsByLevel(level) {
+            const type = level === 'shs' ? 'shs-loading' : 'college-loading';
             const response = await fetch(`/api/attendance.php?type=${type}&period_start=${currentPeriodStart}&period_end=${currentPeriodEnd}`, {
                 credentials: 'include'
             });
             if (!response.ok) throw new Error(`Failed to load ${type}`);
             return normalizeApiRecords(await response.json()).map(row => ({
                 ...row,
-                employee_id: Number(row.employee_id)
+                employee_id: Number(row.employee_id),
+                load_level: level
             }));
         }
 
-        async function savePeriodLoad(load) {
-            const type = activeLoadingLevel() === 'shs' ? 'shs-loading' : 'college-loading';
+        async function savePeriodLoad(load, level = activeLoadingLevel()) {
+            const type = level === 'shs' ? 'shs-loading' : 'college-loading';
             const response = await fetch(`/api/attendance.php?type=${type}`, {
                 method: 'POST',
                 credentials: 'include',
@@ -453,44 +492,44 @@
 
         function renderTable() {
             if (!currentPeriodStart || !currentPeriodEnd) {
-                document.getElementById('loadingMessage').innerHTML = 'Select a payroll period to edit period-based loadings.';
+                document.getElementById('loadingMessage').innerHTML = isPeriodMode()
+                    ? 'Select a payroll period to view teacher schedules.'
+                    : 'Select a payroll period to edit loadings.';
                 document.getElementById('loadingMessage').classList.remove('hidden');
                 document.getElementById('teacherTable').classList.add('hidden');
                 return false;
             }
 
-            const teachers = allEmployees.filter(emp => {
-                if (emp.status !== 'Active') return false;
-                if (activeLoadingLevel() === 'shs') {
-                    return emp.assignment === 'shs_only' || emp.assignment === 'both';
-                } else {
-                    return emp.assignment === 'college_only' || emp.assignment === 'both';
-                }
-            });
+            const teachers = getFilteredTeachers();
 
             if (teachers.length === 0) {
-                document.getElementById('loadingMessage').innerHTML = 'No teachers found. Accountant needs to add teachers first.';
+                document.getElementById('loadingMessage').innerHTML = isPeriodMode()
+                    ? 'No teachers match the current search and filter.'
+                    : 'No teachers found. Accountant needs to add teachers first.';
                 document.getElementById('loadingMessage').classList.remove('hidden');
                 document.getElementById('teacherTable').classList.add('hidden');
                 return false;
             }
 
-            const headers = isPeriodMode() && currentLevel === 'period-hours'
-                ? ['Teacher Name', 'Rate/hr', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun', 'Total Hours', 'Total Pay']
+            const headers = isPeriodMode()
+                ? ['Teacher Name', 'Assignment', 'Level', 'Subject', 'Rate/hr', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun', 'Total Hours', 'Total Pay']
                 : ['Teacher Name', 'Subject', 'Rate/hr', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun', 'Total Hours', 'Total Pay'];
             const headerHtml = `<tr><th>${headers.join('</th><th>')}</th></tr>`;
             document.getElementById('tableHeader').innerHTML = headerHtml;
 
             let bodyHtml = '';
 
-            for (const teacher of teachers) {
+            for (const rowData of getScheduleRows(teachers)) {
+                const { teacher, level } = rowData;
                 const loading = allLoads.find(l =>
                     Number(l.employee_id) === Number(teacher.id) &&
+                    l.load_level === level &&
                     (
                         l.period_start === currentPeriodStart && l.period_end === currentPeriodEnd
                     )
                 ) || {
                     employee_id: teacher.id,
+                    load_level: level,
                     semester: currentSemester,
                     school_year: currentSchoolYear,
                     period_start: currentPeriodStart,
@@ -499,19 +538,20 @@
                     mon: 0, tue: 0, wed: 0, thu: 0, fri: 0, sat: 0, sun: 0
                 };
 
-                const rate = getRateForTeacher(teacher);
+                const rate = getRateForTeacher(teacher, level);
 
                 const totalHours = (loading.mon || 0) + (loading.tue || 0) + (loading.wed || 0) +
                                   (loading.thu || 0) + (loading.fri || 0) + (loading.sat || 0) + (loading.sun || 0);
                 const totalPay = totalHours * rate;
 
-                const subjectCell = isPeriodMode() && currentLevel === 'period-hours'
-                    ? ''
-                    : `<td><input type="text" value="${escapeHtml(loading.subject || '')}" data-field="subject" class="w-32"></td>`;
+                const scheduleCells = isPeriodMode()
+                    ? `<td>${assignmentLabel(teacher.assignment)}</td><td>${levelLabel(level)}</td>`
+                    : '';
 
-                bodyHtml += `<tr data-id="${teacher.id}">
+                bodyHtml += `<tr data-id="${teacher.id}" data-level="${level}">
                     <td style="text-align:left; font-weight:500;">${escapeHtml(teacher.full_name)}</td>
-                    ${subjectCell}
+                    ${scheduleCells}
+                    <td><input type="text" value="${escapeHtml(loading.subject || '')}" data-field="subject" class="w-32"></td>
                     <td><input type="text" value="₱${rate}/hr" disabled class="bg-gray-100 w-24"></td>
                     <td><input type="number" step="0.5" value="${loading.mon || 0}" data-field="mon" class="w-16"></td>
                     <td><input type="number" step="0.5" value="${loading.tue || 0}" data-field="tue" class="w-16"></td>
@@ -520,8 +560,8 @@
                     <td><input type="number" step="0.5" value="${loading.fri || 0}" data-field="fri" class="w-16"></td>
                     <td><input type="number" step="0.5" value="${loading.sat || 0}" data-field="sat" class="w-16"></td>
                     <td><input type="number" step="0.5" value="${loading.sun || 0}" data-field="sun" class="w-16"></td>
-                    <td class="total-cell">${totalHours.toFixed(1)}</td>
-                    <td class="total-cell">₱${totalPay.toFixed(2)}</td>
+                    <td class="total-cell total-hours-cell">${totalHours.toFixed(1)}</td>
+                    <td class="total-cell total-pay-cell">₱${totalPay.toFixed(2)}</td>
                 </tr>`;
             }
 
@@ -529,6 +569,53 @@
 
             attachInputListeners();
             return true;
+        }
+
+        function getFilteredTeachers() {
+            return allEmployees.filter(emp => {
+                if (emp.status !== 'Active') return false;
+
+                if (isPeriodMode()) {
+                    const matchesAssignment = teacherAssignmentFilter === 'all' || emp.assignment === teacherAssignmentFilter;
+                    const matchesSearch = !teacherSearch || String(emp.full_name || '').toLowerCase().includes(teacherSearch);
+                    return matchesAssignment && matchesSearch;
+                }
+
+                if (activeLoadingLevel() === 'shs') {
+                    return emp.assignment === 'shs_only' || emp.assignment === 'both';
+                }
+
+                return emp.assignment === 'college_only' || emp.assignment === 'both';
+            });
+        }
+
+        function getScheduleRows(teachers) {
+            if (!isPeriodMode()) {
+                return teachers.map(teacher => ({ teacher, level: activeLoadingLevel() }));
+            }
+
+            return teachers.flatMap(teacher => {
+                if (teacher.assignment === 'shs_only') return [{ teacher, level: 'shs' }];
+                if (teacher.assignment === 'college_only') return [{ teacher, level: 'college' }];
+                if (teacher.assignment === 'both') {
+                    return [
+                        { teacher, level: 'shs' },
+                        { teacher, level: 'college' }
+                    ];
+                }
+                return [];
+            });
+        }
+
+        function assignmentLabel(assignment) {
+            if (assignment === 'shs_only') return 'SHS only';
+            if (assignment === 'college_only') return 'College only';
+            if (assignment === 'both') return 'Both SHS and College';
+            return 'Unassigned';
+        }
+
+        function levelLabel(level) {
+            return level === 'shs' ? 'SHS' : 'College';
         }
 
         function escapeHtml(str) {
@@ -547,6 +634,7 @@
             if (!row) return;
 
             const employeeId = parseInt(row.dataset.id);
+            const loadLevel = row.dataset.level || activeLoadingLevel();
             const field = input.dataset.field;
             let value = input.type === 'number' ? (parseFloat(input.value) || 0) : input.value;
 
@@ -558,6 +646,7 @@
 
             let loading = allLoads.find(l =>
                 Number(l.employee_id) === Number(employeeId) &&
+                l.load_level === loadLevel &&
                 (
                     l.period_start === currentPeriodStart && l.period_end === currentPeriodEnd
                 )
@@ -566,6 +655,7 @@
             if (!loading) {
                 loading = {
                     employee_id: employeeId,
+                    load_level: loadLevel,
                     semester: currentSemester,
                     school_year: currentSchoolYear,
                     period_start: currentPeriodStart,
@@ -588,11 +678,12 @@
                     fri: Number(loading.fri || 0),
                     sat: Number(loading.sat || 0),
                     sun: Number(loading.sun || 0)
-                });
+                }, loadLevel);
                 showSaveToast();
 
                 const existingIndex = allLoads.findIndex(l =>
                     Number(l.employee_id) === Number(employeeId) &&
+                    l.load_level === loadLevel &&
                     (
                     l.period_start === currentPeriodStart && l.period_end === currentPeriodEnd
                     )
@@ -606,11 +697,11 @@
                 const hours = (loading.mon || 0) + (loading.tue || 0) + (loading.wed || 0) +
                               (loading.thu || 0) + (loading.fri || 0) + (loading.sat || 0) + (loading.sun || 0);
 
-                const rate = getRateForTeacher(teacher);
+                const rate = getRateForTeacher(teacher, loadLevel);
                 const totalPay = hours * rate;
 
-                const totalCell = row.querySelector(`td:nth-child(${isPeriodMode() && currentLevel === 'period-hours' ? 10 : 11})`);
-                const payCell = row.querySelector(`td:nth-child(${isPeriodMode() && currentLevel === 'period-hours' ? 11 : 12})`);
+                const totalCell = row.querySelector('.total-hours-cell');
+                const payCell = row.querySelector('.total-pay-cell');
                 if (totalCell) totalCell.textContent = hours.toFixed(1);
                 if (payCell) payCell.textContent = `₱${totalPay.toFixed(2)}`;
 
@@ -638,6 +729,7 @@
         };
 
         await initPeriodControls();
+        updateScheduleFiltersVisibility();
         loadData();
     </script>
 </body>
