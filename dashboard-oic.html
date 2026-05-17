@@ -98,27 +98,40 @@
         .modal-backdrop.show {
             display: flex;
         }
-        .schedule-frame-table {
-            width: 100%;
-            border-collapse: collapse;
+        .schedule-grid {
+            display: grid;
+            grid-template-columns: repeat(7, minmax(220px, 1fr));
+            gap: 12px;
+            min-width: 1540px;
         }
-        .schedule-frame-table th,
-        .schedule-frame-table td {
+        .schedule-day-card {
             border: 1px solid #e5e7eb;
-            padding: 10px;
-            vertical-align: top;
+            border-radius: 8px;
+            background: #ffffff;
+            overflow: hidden;
         }
-        .schedule-frame-table th {
+        .schedule-day-header {
             background: #f9fafb;
+            border-bottom: 1px solid #e5e7eb;
+            padding: 10px;
             font-weight: 600;
             color: #374151;
         }
+        .schedule-day-body {
+            padding: 10px;
+        }
         .schedule-frame-row {
             display: grid;
-            grid-template-columns: minmax(110px, 1fr) minmax(110px, 1fr) 36px;
+            grid-template-columns: 1fr 1fr 32px;
             gap: 8px;
-            align-items: center;
+            align-items: end;
             margin-bottom: 8px;
+            border-bottom: 1px solid #f3f4f6;
+            padding-bottom: 8px;
+        }
+        .schedule-frame-row input[data-frame-field="subject"],
+        .schedule-frame-row input[data-frame-field="room"] {
+            grid-column: 1 / -1;
         }
         .save-toast {
             position: fixed;
@@ -285,21 +298,8 @@
                 </div>
                 <button type="button" id="closeScheduleModalBtn" class="text-gray-500 hover:text-gray-800 text-2xl leading-none">&times;</button>
             </div>
-            <div class="p-5 overflow-y-auto">
-                <label class="block text-sm font-medium text-gray-700 mb-4">
-                    Subject
-                    <input id="scheduleSubjectInput" type="text" class="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[#b0303b]">
-                </label>
-                <table class="schedule-frame-table">
-                    <thead>
-                        <tr>
-                            <th class="w-36">Day</th>
-                            <th>Time Frames</th>
-                            <th class="w-28">Hours</th>
-                        </tr>
-                    </thead>
-                    <tbody id="scheduleFrameBody"></tbody>
-                </table>
+            <div class="p-5 overflow-x-auto overflow-y-auto">
+                <div id="scheduleFrameGrid" class="schedule-grid"></div>
             </div>
             <div class="flex justify-end gap-3 p-5 border-t border-gray-200 bg-gray-50">
                 <button type="button" id="cancelScheduleBtn" class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-100">Cancel</button>
@@ -416,7 +416,7 @@
             openScheduleModal(Number(button.dataset.employeeId), button.dataset.level);
         });
 
-        document.getElementById('scheduleFrameBody').addEventListener('click', (e) => {
+        document.getElementById('scheduleFrameGrid').addEventListener('click', (e) => {
             const addButton = e.target.closest('[data-action="add-frame"]');
             const removeButton = e.target.closest('[data-action="remove-frame"]');
 
@@ -430,7 +430,7 @@
             }
         });
 
-        document.getElementById('scheduleFrameBody').addEventListener('input', (e) => {
+        document.getElementById('scheduleFrameGrid').addEventListener('input', (e) => {
             const input = e.target.closest('input[type="time"]');
             if (!input) return;
             updateModalDayTotal(input.dataset.day);
@@ -795,7 +795,6 @@
             document.getElementById('scheduleModalTitle').textContent = `Edit Schedule - ${teacher.full_name}`;
             document.getElementById('scheduleModalSubtitle').textContent =
                 `${levelLabel(level)} | ${assignmentLabel(teacher.assignment)} | ${currentPeriodStart} to ${currentPeriodEnd}`;
-            document.getElementById('scheduleSubjectInput').value = loading.subject || '';
             renderScheduleFrameTable(loadScheduleFrames(employeeId, level));
             document.getElementById('scheduleModal').classList.add('show');
         }
@@ -806,35 +805,39 @@
         }
 
         function renderScheduleFrameTable(framesByDay) {
-            const rows = scheduleDays.map(day => `
-                <tr>
-                    <td class="font-medium text-gray-700">${day.label}</td>
-                    <td>
+            const cards = scheduleDays.map(day => `
+                <section class="schedule-day-card">
+                    <div class="schedule-day-header">
+                        <div>${day.label}</div>
+                        <div class="text-xs text-[#8a1f27] mt-1">Hours: <span data-day-total="${day.key}">0.0</span></div>
+                    </div>
+                    <div class="schedule-day-body">
                         <div data-day-frames="${day.key}"></div>
-                        <button type="button" data-action="add-frame" data-day="${day.key}" class="mt-2 px-3 py-1.5 text-sm font-medium text-[#8a1f27] bg-red-50 border border-red-100 rounded-lg hover:bg-red-100">
+                        <button type="button" data-action="add-frame" data-day="${day.key}" class="mt-2 w-full px-3 py-1.5 text-sm font-medium text-[#8a1f27] bg-red-50 border border-red-100 rounded-lg hover:bg-red-100">
                             Add time frame
                         </button>
-                    </td>
-                    <td class="font-semibold text-[#8a1f27]" data-day-total="${day.key}">0.0</td>
-                </tr>
+                    </div>
+                </section>
             `).join('');
 
-            document.getElementById('scheduleFrameBody').innerHTML = rows;
+            document.getElementById('scheduleFrameGrid').innerHTML = cards;
 
             for (const day of scheduleDays) {
                 const dayFrames = Array.isArray(framesByDay[day.key]) ? framesByDay[day.key] : [];
-                dayFrames.forEach(frame => addScheduleFrame(day.key, frame.start, frame.end));
+                dayFrames.forEach(frame => addScheduleFrame(day.key, frame.start, frame.end, frame.subject, frame.room));
                 updateModalDayTotal(day.key);
             }
         }
 
-        function addScheduleFrame(day, start = '', end = '') {
+        function addScheduleFrame(day, start = '', end = '', subject = '', room = '') {
             const container = document.querySelector(`[data-day-frames="${day}"]`);
             if (!container) return;
 
             const frame = document.createElement('div');
             frame.className = 'schedule-frame-row';
             frame.innerHTML = `
+                <input type="text" value="${escapeAttr(subject)}" data-day="${day}" data-frame-field="subject" placeholder="Subject" class="border border-gray-200 rounded-lg px-2 py-1.5 text-sm focus:ring-2 focus:ring-[#b0303b]">
+                <input type="text" value="${escapeAttr(room)}" data-day="${day}" data-frame-field="room" placeholder="Room" class="border border-gray-200 rounded-lg px-2 py-1.5 text-sm focus:ring-2 focus:ring-[#b0303b]">
                 <input type="time" value="${escapeAttr(start)}" data-day="${day}" data-frame-field="start" class="border border-gray-200 rounded-lg px-2 py-1.5 text-sm focus:ring-2 focus:ring-[#b0303b]">
                 <input type="time" value="${escapeAttr(end)}" data-day="${day}" data-frame-field="end" class="border border-gray-200 rounded-lg px-2 py-1.5 text-sm focus:ring-2 focus:ring-[#b0303b]">
                 <button type="button" data-action="remove-frame" data-day="${day}" class="h-9 w-9 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-100">&times;</button>
@@ -854,7 +857,9 @@
                 for (const row of rows) {
                     const start = row.querySelector('[data-frame-field="start"]').value;
                     const end = row.querySelector('[data-frame-field="end"]').value;
-                    if (!start && !end) continue;
+                    const subject = row.querySelector('[data-frame-field="subject"]').value.trim();
+                    const room = row.querySelector('[data-frame-field="room"]').value.trim();
+                    if (!start && !end && !subject && !room) continue;
                     if (!start || !end) {
                         throw new Error(`${day.label} has an incomplete time frame.`);
                     }
@@ -864,7 +869,7 @@
                         throw new Error(`${day.label} has an invalid time frame.`);
                     }
 
-                    frames[day.key].push({ start, end });
+                    frames[day.key].push({ start, end, subject, room });
                     totals[day.key] += hours;
                 }
             }
@@ -899,6 +904,20 @@
             return hours * 60 + minutes;
         }
 
+        function getScheduleSubjectSummary(framesByDay) {
+            const subjects = [];
+
+            for (const day of scheduleDays) {
+                for (const frame of framesByDay[day.key] || []) {
+                    if (frame.subject && !subjects.includes(frame.subject)) {
+                        subjects.push(frame.subject);
+                    }
+                }
+            }
+
+            return subjects.join(', ');
+        }
+
         async function saveScheduleFromModal() {
             if (!currentScheduleContext) return;
 
@@ -911,7 +930,7 @@
             }
 
             const { employeeId, level } = currentScheduleContext;
-            const subject = document.getElementById('scheduleSubjectInput').value.trim();
+            const subject = getScheduleSubjectSummary(schedule.frames);
             const payload = {
                 employee_id: employeeId,
                 period_start: currentPeriodStart,
