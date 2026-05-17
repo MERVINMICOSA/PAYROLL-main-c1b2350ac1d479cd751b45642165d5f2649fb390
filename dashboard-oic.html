@@ -396,6 +396,14 @@
             return [];
         }
 
+        async function fetchEmployees() {
+            const response = await fetch('/api/employees.php', {
+                credentials: 'include'
+            });
+            if (!response.ok) throw new Error(`Failed to load employees: ${response.status}`);
+            return normalizeApiRecords(await response.json());
+        }
+
         async function fetchPeriodLoads() {
             if (!currentPeriodStart || !currentPeriodEnd) return [];
             const type = activeLoadingLevel() === 'shs' ? 'shs-loading' : 'college-loading';
@@ -426,7 +434,7 @@
                 document.getElementById('loadingMessage').classList.remove('hidden');
                 document.getElementById('teacherTable').classList.add('hidden');
 
-                allEmployees = await Database.getAllEmployees();
+                allEmployees = await fetchEmployees();
                 allLoads = await fetchPeriodLoads();
 
                 console.log("Loaded employees:", allEmployees.length);
