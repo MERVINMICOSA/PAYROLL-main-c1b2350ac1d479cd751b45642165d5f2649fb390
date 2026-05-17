@@ -146,7 +146,7 @@
                 <p class="text-gray-500 text-sm mt-1">Assign subjects and daily hours for teachers (rates are set by Accountant)</p>
             </div>
 
-            <div class="flex items-center gap-3">
+            <div class="hidden items-center gap-3">
                 <select id="semesterSelect" class="border border-gray-200 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-[#b0303b]">
                     <option value="1st Sem">1st Semester</option>
                     <option value="2nd Sem">2nd Semester</option>
@@ -174,7 +174,7 @@
                 <h2 class="font-semibold text-gray-800" id="currentLevelTitle">SHS Faculty Loading</h2>
                 <span class="text-sm text-gray-500">Click any cell to edit - saves automatically</span>
             </div>
-            <div id="periodControls" class="hidden mb-4 grid gap-3 md:grid-cols-[minmax(220px,1fr)_150px_150px_150px_auto] items-end bg-gray-50 rounded-lg p-4">
+            <div id="periodControls" class="mb-4 grid gap-3 md:grid-cols-[minmax(220px,1fr)_150px_150px_150px_auto] items-end bg-gray-50 rounded-lg p-4">
                 <label class="text-sm font-medium text-gray-700">
                     Period
                     <select id="periodSelect" class="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[#b0303b]">
@@ -207,10 +207,6 @@
                 </table>
             </div>
 
-            <div class="mt-4 p-4 bg-gray-50 rounded-lg flex justify-between items-center">
-                <span class="font-medium">Total Load Hours: <span id="totalLoadHours">0</span></span>
-                <span class="font-medium">Total Cost: ₱<span id="totalCost">0.00</span></span>
-            </div>
         </div>
         </section>
 
@@ -322,7 +318,6 @@
                 tab.classList.add('active');
                 currentLevel = tab.dataset.level;
                 document.getElementById('currentLevelTitle').textContent = getCurrentTitle();
-                document.getElementById('periodControls').classList.toggle('hidden', !isPeriodMode());
                 loadData();
             });
         });
@@ -432,9 +427,7 @@
                 document.getElementById('teacherTable').classList.add('hidden');
 
                 allEmployees = await Database.getAllEmployees();
-                allLoads = isPeriodMode()
-                    ? await fetchPeriodLoads()
-                    : await Database.getAllTeacherLoads();
+                allLoads = await fetchPeriodLoads();
 
                 console.log("Loaded employees:", allEmployees.length);
                 console.log("Loaded teacher loads:", allLoads.length);
@@ -451,12 +444,10 @@
         }
 
         function renderTable() {
-            if (isPeriodMode() && (!currentPeriodStart || !currentPeriodEnd)) {
+            if (!currentPeriodStart || !currentPeriodEnd) {
                 document.getElementById('loadingMessage').innerHTML = 'Select a payroll period to edit period-based loadings.';
                 document.getElementById('loadingMessage').classList.remove('hidden');
                 document.getElementById('teacherTable').classList.add('hidden');
-                document.getElementById('totalLoadHours').textContent = '0';
-                document.getElementById('totalCost').textContent = '0.00';
                 return false;
             }
 
@@ -473,8 +464,6 @@
                 document.getElementById('loadingMessage').innerHTML = 'No teachers found. Accountant needs to add teachers first.';
                 document.getElementById('loadingMessage').classList.remove('hidden');
                 document.getElementById('teacherTable').classList.add('hidden');
-                document.getElementById('totalLoadHours').textContent = '0';
-                document.getElementById('totalCost').textContent = '0.00';
                 return false;
             }
 
@@ -484,17 +473,13 @@
             const headerHtml = `<tr><th>${headers.join('</th><th>')}</th></tr>`;
             document.getElementById('tableHeader').innerHTML = headerHtml;
 
-            let totalLoadHours = 0;
-            let totalCost = 0;
             let bodyHtml = '';
 
             for (const teacher of teachers) {
                 const loading = allLoads.find(l =>
                     Number(l.employee_id) === Number(teacher.id) &&
                     (
-                        isPeriodMode()
-                            ? l.period_start === currentPeriodStart && l.period_end === currentPeriodEnd
-                            : l.semester === currentSemester && l.school_year === currentSchoolYear
+                        l.period_start === currentPeriodStart && l.period_end === currentPeriodEnd
                     )
                 ) || {
                     employee_id: teacher.id,
@@ -511,9 +496,6 @@
                 const totalHours = (loading.mon || 0) + (loading.tue || 0) + (loading.wed || 0) +
                                   (loading.thu || 0) + (loading.fri || 0) + (loading.sat || 0) + (loading.sun || 0);
                 const totalPay = totalHours * rate;
-
-                totalLoadHours += totalHours;
-                totalCost += totalPay;
 
                 const subjectCell = isPeriodMode() && currentLevel === 'period-hours'
                     ? ''
@@ -536,8 +518,6 @@
             }
 
             document.getElementById('tableBody').innerHTML = bodyHtml;
-            document.getElementById('totalLoadHours').textContent = totalLoadHours.toFixed(1);
-            document.getElementById('totalCost').textContent = totalCost.toFixed(2);
 
             attachInputListeners();
             return true;
@@ -571,9 +551,7 @@
             let loading = allLoads.find(l =>
                 Number(l.employee_id) === Number(employeeId) &&
                 (
-                    isPeriodMode()
-                        ? l.period_start === currentPeriodStart && l.period_end === currentPeriodEnd
-                        : l.semester === currentSemester && l.school_year === currentSchoolYear
+                    l.period_start === currentPeriodStart && l.period_end === currentPeriodEnd
                 )
             );
 
@@ -590,31 +568,25 @@
             loading[field] = value;
 
             try {
-                if (isPeriodMode()) {
-                    await savePeriodLoad({
-                        employee_id: employeeId,
-                        period_start: currentPeriodStart,
-                        period_end: currentPeriodEnd,
-                        subject: loading.subject || '',
-                        mon: Number(loading.mon || 0),
-                        tue: Number(loading.tue || 0),
-                        wed: Number(loading.wed || 0),
-                        thu: Number(loading.thu || 0),
-                        fri: Number(loading.fri || 0),
-                        sat: Number(loading.sat || 0),
-                        sun: Number(loading.sun || 0)
-                    });
-                } else {
-                    await Database.saveTeacherLoad(loading);
-                }
+                await savePeriodLoad({
+                    employee_id: employeeId,
+                    period_start: currentPeriodStart,
+                    period_end: currentPeriodEnd,
+                    subject: loading.subject || '',
+                    mon: Number(loading.mon || 0),
+                    tue: Number(loading.tue || 0),
+                    wed: Number(loading.wed || 0),
+                    thu: Number(loading.thu || 0),
+                    fri: Number(loading.fri || 0),
+                    sat: Number(loading.sat || 0),
+                    sun: Number(loading.sun || 0)
+                });
                 showSaveToast();
 
                 const existingIndex = allLoads.findIndex(l =>
                     Number(l.employee_id) === Number(employeeId) &&
                     (
-                        isPeriodMode()
-                            ? l.period_start === currentPeriodStart && l.period_end === currentPeriodEnd
-                            : l.semester === currentSemester && l.school_year === currentSchoolYear
+                    l.period_start === currentPeriodStart && l.period_end === currentPeriodEnd
                     )
                 );
                 if (existingIndex >= 0) {
@@ -634,8 +606,6 @@
                 if (totalCell) totalCell.textContent = hours.toFixed(1);
                 if (payCell) payCell.textContent = `₱${totalPay.toFixed(2)}`;
 
-                updateGlobalTotals();
-
             } catch (error) {
                 console.error('Error saving:', error);
                 alert('Failed to save. Please try again.');
@@ -643,37 +613,6 @@
             } finally {
                 input.style.backgroundColor = originalBg;
             }
-        }
-
-        function updateGlobalTotals() {
-            const rows = document.querySelectorAll('#tableBody tr');
-            let totalHours = 0;
-            let totalCost = 0;
-
-            rows.forEach(row => {
-                const teacherId = parseInt(row.dataset.id);
-                const teacher = allEmployees.find(e => e.id === teacherId);
-                if (!teacher) return;
-
-                const rate = getRateForTeacher(teacher);
-
-                const loading = allLoads.find(l =>
-                    Number(l.employee_id) === Number(teacherId) &&
-                    (
-                        isPeriodMode()
-                            ? l.period_start === currentPeriodStart && l.period_end === currentPeriodEnd
-                            : l.semester === currentSemester && l.school_year === currentSchoolYear
-                    )
-                ) || { mon:0, tue:0, wed:0, thu:0, fri:0, sat:0, sun:0 };
-
-                const hours = (loading.mon || 0) + (loading.tue || 0) + (loading.wed || 0) +
-                              (loading.thu || 0) + (loading.fri || 0) + (loading.sat || 0) + (loading.sun || 0);
-                totalHours += hours;
-                totalCost += hours * rate;
-            });
-
-            document.getElementById('totalLoadHours').textContent = totalHours.toFixed(1);
-            document.getElementById('totalCost').textContent = totalCost.toFixed(2);
         }
 
         function attachInputListeners() {
