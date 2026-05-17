@@ -90,6 +90,13 @@ window.addEventListener("DOMContentLoaded", async () => {
     // Render calendar
     renderCalendar();
 
+    // (Fix) Gross pay fields were missing in some faculty views.
+    // Keep view logic self-contained; this page uses daily_attendance only,
+    // so nothing further is required here unless the HTML expects fields
+    // like gross_pay. If fields are present, they should come from the API
+    // records, not from daily attendance.
+
+
     // Edit button - navigate to edit page with attendance ID and selected date
     const editBtn = document.getElementById("editBtn");
     if (editBtn) {

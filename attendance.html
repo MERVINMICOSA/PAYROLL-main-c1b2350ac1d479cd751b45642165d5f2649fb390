@@ -1655,19 +1655,36 @@ if (config.hasDynamicDates) {
         savedData = {};
     }
 
-    currentTableData = employees.map(emp => {
-        const record = savedData[emp.id] || {};
-        const row = { id: emp.id, name: emp.full_name };
+        currentTableData = employees.map(emp => {
+            const record = savedData[emp.id] || {};
+            const row = { id: emp.id, name: emp.full_name };
 
-        config.fields.forEach(field => {
-            if (field === 'rate') {
-                row[field] = emp.rate_shs || emp.rate_college || 0;
-            } else if (field === 'admin_rate') {
-                row[field] = Number(record.admin_rate ?? responseMeta.global_rate ?? 0);
-            } else {
-                row[field] = Number(record[field] ?? 0);
+            // ✅ FIX: SHS Loading backend doesn't return `total`, only mon..sun.
+            // Compute `total` from the returned day values so the "Total Hours" column is displayed.
+            if (currentTab === 'shs-loading') {
+                const mon = Number(record.mon ?? 0);
+                const tue = Number(record.tue ?? 0);
+                const wed = Number(record.wed ?? 0);
+                const thu = Number(record.thu ?? 0);
+                const fri = Number(record.fri ?? 0);
+                const sat = Number(record.sat ?? 0);
+                const sun = Number(record.sun ?? 0);
+                row.total = mon + tue + wed + thu + fri + sat + sun;
             }
-        });
+
+            config.fields.forEach(field => {
+                if (field === 'rate') {
+                    row[field] = emp.rate_shs || emp.rate_college || 0;
+                } else if (field === 'admin_rate') {
+                    row[field] = Number(record.admin_rate ?? responseMeta.global_rate ?? 0);
+                } else if (field === 'total' && row.total !== undefined) {
+                    // keep computed value
+                    row[field] = Number(row.total || 0);
+                } else {
+                    row[field] = Number(record[field] ?? 0);
+                }
+            });
+
 
         if (
             config.fields.includes('total_pay') &&
