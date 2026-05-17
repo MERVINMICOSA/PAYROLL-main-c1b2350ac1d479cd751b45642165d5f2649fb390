@@ -173,6 +173,76 @@
             display: flex;
             animation: fadeInOut 2s ease;
         }
+        .settings-card {
+            background: white;
+            border-radius: 1.5rem;
+            padding: 2rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        .settings-header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        .settings-header i {
+            font-size: 2rem;
+            color: #b0303b;
+            background: rgba(176, 48, 59, 0.1);
+            padding: 1rem;
+            border-radius: 50%;
+        }
+        .settings-header h2 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #1f2937;
+        }
+        .settings-header p {
+            color: #6b7280;
+            font-size: 0.875rem;
+        }
+        .info-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem 0;
+            border-bottom: 1px solid #f3f4f6;
+        }
+        .info-label {
+            color: #6b7280;
+            font-size: 0.95rem;
+        }
+        .info-value {
+            font-weight: 500;
+            color: #1f2937;
+            text-align: right;
+        }
+        .logout-button {
+            background-color: #fee2e2;
+            color: #dc2626;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.75rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            width: 100%;
+            justify-content: center;
+            margin-top: 1.5rem;
+        }
+        .logout-button:hover {
+            background-color: #fecaca;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(220, 38, 38, 0.2);
+        }
         @keyframes fadeInOut {
             0% { opacity: 0; transform: translateY(20px); }
             15% { opacity: 1; transform: translateY(0); }
@@ -296,20 +366,130 @@
             <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
                 <div>
                     <h1 class="text-2xl font-bold text-[#8a1f27]">Settings</h1>
-                    <p class="text-gray-500 text-sm mt-1">Manage your OIC dashboard session.</p>
+                    <p class="text-gray-500 text-sm mt-1" id="oicSettingsDate"></p>
                 </div>
             </div>
 
-            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 max-w-xl">
-                <h2 class="font-semibold text-gray-800 mb-2">Account</h2>
-                <p class="text-sm text-gray-500 mb-5">Signed in as <span id="settingsUserName" class="font-medium text-gray-700">OIC Head</span>.</p>
-                <button type="button" id="settingsLogoutBtn" class="inline-flex items-center gap-2 bg-[#8a1f27] hover:bg-[#b0303b] text-white px-4 py-2 rounded-lg font-medium">
-                    <i class="fa-solid fa-right-from-bracket"></i>
-                    Logout
+            <div class="settings-card">
+                <div class="settings-header">
+                    <i class="fa-regular fa-user-circle"></i>
+                    <div>
+                        <h2>Account Information</h2>
+                        <p>View your OIC profile and manage your account</p>
+                    </div>
+                </div>
+
+                <div class="space-y-2">
+                    <div class="info-item">
+                        <span class="info-label"><i class="fa-regular fa-user mr-2 text-gray-400"></i>Full Name</span>
+                        <span class="info-value" id="displayFullName">Loading...</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label"><i class="fa-regular fa-id-card mr-2 text-gray-400"></i>Username</span>
+                        <span class="info-value" id="displayUsername">oic</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label"><i class="fa-regular fa-building mr-2 text-gray-400"></i>Role</span>
+                        <span class="info-value" id="displayRole">Officer in Charge</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label"><i class="fa-regular fa-calendar mr-2 text-gray-400"></i>Last Login</span>
+                        <span class="info-value" id="lastLogin">Just now</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label"><i class="fa-solid fa-globe mr-2 text-gray-400"></i>System Version</span>
+                        <span class="info-value">v2.0.0 (Excel Mode)</span>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-6">
+                    <button type="button" onclick="changePassword()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 py-3 rounded-lg transition-colors flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-key"></i>
+                        Change Password
+                    </button>
+                    <button type="button" onclick="viewActivity()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 py-3 rounded-lg transition-colors flex items-center justify-center gap-2">
+                        <i class="fa-regular fa-clock"></i>
+                        Activity Log
+                    </button>
+                </div>
+
+                <button type="button" onclick="logout()" class="logout-button">
+                    <i class="fa-solid fa-sign-out-alt"></i>
+                    Sign Out
                 </button>
+
+                <div class="mt-6 text-center text-xs text-gray-400">
+                    <p>&copy; 2026 Philtech GMA. All rights reserved.</p>
+                    <p class="mt-1">Excel-style Attendance System v2.0</p>
+                </div>
             </div>
         </section>
     </main>
+
+    <div id="passwordModal" class="fixed inset-0 bg-black/50 flex items-center justify-center hidden z-50">
+        <div class="bg-white rounded-2xl max-w-md w-full mx-4">
+            <div class="p-6 border-b border-gray-100">
+                <h3 class="text-xl font-bold text-[#8a1f27]">Change Password</h3>
+            </div>
+            <div class="p-6">
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Current Password</label>
+                        <input type="password" id="currentPassword" class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#b0303b] focus:border-transparent">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">New Password</label>
+                        <input type="password" id="newPassword" class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#b0303b] focus:border-transparent">
+                        <p class="text-xs text-gray-400 mt-1">Minimum 6 characters</p>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Confirm New Password</label>
+                        <input type="password" id="confirmPassword" class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#b0303b] focus:border-transparent">
+                    </div>
+                </div>
+            </div>
+            <div class="p-6 border-t border-gray-100 flex justify-end gap-3">
+                <button type="button" onclick="closePasswordModal()" class="px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">Cancel</button>
+                <button type="button" onclick="updatePassword()" class="px-4 py-2 bg-[#b0303b] text-white rounded-lg hover:bg-[#8a1f27] transition-colors">Update Password</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="activityModal" class="fixed inset-0 bg-black/50 flex items-center justify-center hidden z-50">
+        <div class="bg-white rounded-2xl max-w-2xl w-full mx-4 max-h-[80vh] overflow-y-auto">
+            <div class="p-6 border-b border-gray-100 flex justify-between items-center sticky top-0 bg-white">
+                <h3 class="text-xl font-bold text-[#8a1f27]">Login Activity</h3>
+                <button type="button" onclick="closeActivityModal()" class="text-gray-400 hover:text-gray-600">
+                    <i class="fa-solid fa-xmark text-2xl"></i>
+                </button>
+            </div>
+            <div class="p-6">
+                <div class="space-y-4" id="activityLog">
+                    <div class="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                        <div class="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center text-green-600">
+                            <i class="fa-solid fa-circle-check"></i>
+                        </div>
+                        <div class="flex-1">
+                            <p class="text-sm font-medium text-gray-800">Successful login</p>
+                            <p class="text-xs text-gray-500">Today at 8:30 AM - Chrome on Windows</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                        <div class="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center text-green-600">
+                            <i class="fa-solid fa-circle-check"></i>
+                        </div>
+                        <div class="flex-1">
+                            <p class="text-sm font-medium text-gray-800">Successful login</p>
+                            <p class="text-xs text-gray-500">Previous session - Chrome on Windows</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="p-6 border-t border-gray-100">
+                <button type="button" onclick="closeActivityModal()" class="w-full bg-gray-100 py-2 rounded-lg hover:bg-gray-200 transition-colors">Close</button>
+            </div>
+        </div>
+    </div>
 
     <div id="scheduleModal" class="modal-backdrop">
         <div class="bg-white rounded-xl shadow-xl border border-gray-200 w-full max-w-5xl max-h-[90vh] overflow-hidden flex flex-col">
@@ -368,8 +548,32 @@
         ];
 
         const user = JSON.parse(localStorage.getItem('user') || '{}');
-        document.getElementById('userName').textContent = user.name || 'OIC Head';
-        document.getElementById('settingsUserName').textContent = user.name || 'OIC Head';
+
+        function getOicDisplayName() {
+            return user.full_name || user.name || window.currentUser?.full_name || 'OIC Head';
+        }
+
+        function loadOicUserInfo() {
+            const displayName = getOicDisplayName();
+            document.getElementById('userName').textContent = displayName;
+            document.getElementById('displayFullName').textContent = displayName;
+            document.getElementById('displayUsername').textContent = user.username || window.currentUser?.username || 'oic';
+            document.getElementById('displayRole').textContent = 'Officer in Charge';
+            document.getElementById('oicSettingsDate').textContent = new Date().toLocaleDateString('en-US', {
+                month: 'long',
+                day: 'numeric',
+                year: 'numeric'
+            });
+
+            const lastLogin = localStorage.getItem('lastLogin');
+            if (lastLogin) {
+                document.getElementById('lastLogin').textContent = new Date(lastLogin).toLocaleString();
+            } else {
+                const now = new Date().toLocaleString();
+                document.getElementById('lastLogin').textContent = now;
+                localStorage.setItem('lastLogin', now);
+            }
+        }
 
         function showDashboardSection(section) {
             const isSettings = section === 'settings';
@@ -379,11 +583,12 @@
             document.getElementById('settingsNav').classList.toggle('active', isSettings);
             document.getElementById('loadingNav').classList.toggle('bg-[#b0303b]', !isSettings);
             document.getElementById('settingsNav').classList.toggle('bg-[#b0303b]', isSettings);
+            window.location.hash = isSettings ? 'settings' : 'loading';
         }
+        window.showOicDashboardSection = showDashboardSection;
 
         document.getElementById('loadingNav').addEventListener('click', () => showDashboardSection('loading'));
         document.getElementById('settingsNav').addEventListener('click', () => showDashboardSection('settings'));
-        document.getElementById('settingsLogoutBtn').addEventListener('click', () => logout());
 
         document.getElementById('semesterSelect').addEventListener('change', (e) => {
             currentSemester = e.target.value;
@@ -1184,11 +1389,100 @@
             });
         }
 
-        window.logout = function() {
+        window.closePasswordModal = function() {
+            document.getElementById('passwordModal').classList.add('hidden');
+            document.getElementById('currentPassword').value = '';
+            document.getElementById('newPassword').value = '';
+            document.getElementById('confirmPassword').value = '';
+        };
+
+        window.closeActivityModal = function() {
+            document.getElementById('activityModal').classList.add('hidden');
+        };
+
+        window.changePassword = function() {
+            showDashboardSection('settings');
+            document.getElementById('passwordModal').classList.remove('hidden');
+        };
+
+        window.viewActivity = function() {
+            showDashboardSection('settings');
+            document.getElementById('activityModal').classList.remove('hidden');
+        };
+
+        window.updatePassword = async function() {
+            const current = document.getElementById('currentPassword').value;
+            const newPass = document.getElementById('newPassword').value;
+            const confirm = document.getElementById('confirmPassword').value;
+
+            if (!current || !newPass || !confirm) {
+                alert('Please fill in all fields');
+                return;
+            }
+
+            if (newPass !== confirm) {
+                alert('New passwords do not match');
+                return;
+            }
+
+            if (newPass.length < 6) {
+                alert('Password must be at least 6 characters');
+                return;
+            }
+
+            try {
+                const activeUser = JSON.parse(localStorage.getItem('user') || '{}');
+                const demoUsers = ['accountant', 'superadmin', 'oic'];
+                if (demoUsers.includes(activeUser.username)) {
+                    alert('Password updated successfully!');
+                    closePasswordModal();
+                    return;
+                }
+
+                if (Database) {
+                    await Database.ensureDatabaseReady();
+                    const users = await Database.getAllUsers();
+                    const currentUser = users.find(u => u.username === activeUser.username);
+
+                    if (!currentUser) {
+                        alert('User not found');
+                        return;
+                    }
+
+                    if (current !== currentUser.password) {
+                        alert('Current password is incorrect');
+                        return;
+                    }
+
+                    currentUser.password = newPass;
+                    await Database.updateUser(currentUser);
+                }
+
+                alert('Password updated successfully!');
+                closePasswordModal();
+            } catch (error) {
+                console.error('Error updating password:', error);
+                alert('Error updating password. Please try again.');
+            }
+        };
+
+        window.logout = async function() {
+            if (!confirm('Are you sure you want to logout?')) return;
+
+            try {
+                await fetch('/api/auth/logout.php', { method: 'POST', credentials: 'include' });
+            } catch (e) {
+                console.error('Logout error:', e);
+            }
+
             localStorage.clear();
             window.location.href = 'index.html';
         };
 
+        loadOicUserInfo();
+        if (window.location.hash === '#settings') {
+            showDashboardSection('settings');
+        }
         await initPeriodControls();
         updateScheduleFiltersVisibility();
         loadData();

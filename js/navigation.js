@@ -413,6 +413,8 @@ function viewProfile() {
     
     if (role === 'superadmin') {
         window.location.href = 'settingsSadmin.html';
+    } else if (role === 'oic') {
+        openOicSettings();
     } else {
         window.location.href = 'settings.html';
     }
@@ -430,6 +432,8 @@ function changePassword() {
         
         if (role === 'superadmin') {
             window.location.href = 'settingsSadmin.html';
+        } else if (role === 'oic') {
+            openOicSettings();
         } else {
             window.location.href = 'settings.html';
         }
@@ -505,10 +509,19 @@ function getSettingsUrl() {
     const role = window.currentUser?.role;
     if (role === 'superadmin') return 'settingsSadmin.html';
     if (role === 'accountant') return 'settings.html';
+    if (role === 'oic') return 'dashboard-oic.html#settings';
     if (role === 'guard') return 'profile.html';
     if (role === 'sa') return 'profile.html';
     if (role === 'admin-staff') return 'profile.html';
     return 'teacher-profile.html';
+}
+
+function openOicSettings() {
+    if (currentPageName === 'dashboard-oic.html' && typeof window.showOicDashboardSection === 'function') {
+        window.showOicDashboardSection('settings');
+    } else {
+        window.location.href = 'dashboard-oic.html#settings';
+    }
 }
 
 // ===========================
