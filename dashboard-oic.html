@@ -122,7 +122,8 @@
         </div>
 
         <div class="hidden md:flex items-center gap-1">
-            <a href="dashboard-oic.html" class="nav-link active px-4 py-2 rounded-lg bg-[#b0303b] text-white font-medium">Teacher Loading</a>
+            <button type="button" id="loadingNav" class="nav-link active px-4 py-2 rounded-lg bg-[#b0303b] text-white font-medium">Teacher Loading</button>
+            <button type="button" id="settingsNav" class="nav-link px-4 py-2 rounded-lg text-white font-medium hover:bg-[#b0303b]">Settings</button>
         </div>
 
         <div class="flex items-center gap-3">
@@ -137,6 +138,7 @@
     </nav>
 
     <main class="p-6 md:p-8 max-w-7xl mx-auto">
+        <section id="loadingSection">
 
         <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
             <div>
@@ -210,6 +212,25 @@
                 <span class="font-medium">Total Cost: ₱<span id="totalCost">0.00</span></span>
             </div>
         </div>
+        </section>
+
+        <section id="settingsSection" class="hidden">
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+                <div>
+                    <h1 class="text-2xl font-bold text-[#8a1f27]">Settings</h1>
+                    <p class="text-gray-500 text-sm mt-1">Manage your OIC dashboard session.</p>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 max-w-xl">
+                <h2 class="font-semibold text-gray-800 mb-2">Account</h2>
+                <p class="text-sm text-gray-500 mb-5">Signed in as <span id="settingsUserName" class="font-medium text-gray-700">OIC Head</span>.</p>
+                <button type="button" id="settingsLogoutBtn" class="inline-flex items-center gap-2 bg-[#8a1f27] hover:bg-[#b0303b] text-white px-4 py-2 rounded-lg font-medium">
+                    <i class="fa-solid fa-right-from-bracket"></i>
+                    Logout
+                </button>
+            </div>
+        </section>
     </main>
 
     <div id="saveToast" class="save-toast">
@@ -238,6 +259,21 @@
 
         const user = JSON.parse(localStorage.getItem('user') || '{}');
         document.getElementById('userName').textContent = user.name || 'OIC Head';
+        document.getElementById('settingsUserName').textContent = user.name || 'OIC Head';
+
+        function showDashboardSection(section) {
+            const isSettings = section === 'settings';
+            document.getElementById('loadingSection').classList.toggle('hidden', isSettings);
+            document.getElementById('settingsSection').classList.toggle('hidden', !isSettings);
+            document.getElementById('loadingNav').classList.toggle('active', !isSettings);
+            document.getElementById('settingsNav').classList.toggle('active', isSettings);
+            document.getElementById('loadingNav').classList.toggle('bg-[#b0303b]', !isSettings);
+            document.getElementById('settingsNav').classList.toggle('bg-[#b0303b]', isSettings);
+        }
+
+        document.getElementById('loadingNav').addEventListener('click', () => showDashboardSection('loading'));
+        document.getElementById('settingsNav').addEventListener('click', () => showDashboardSection('settings'));
+        document.getElementById('settingsLogoutBtn').addEventListener('click', () => logout());
 
         document.getElementById('semesterSelect').addEventListener('change', (e) => {
             currentSemester = e.target.value;
