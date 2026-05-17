@@ -85,6 +85,41 @@
             font-weight: 600;
             color: #b0303b;
         }
+        .modal-backdrop {
+            position: fixed;
+            inset: 0;
+            background: rgba(17, 24, 39, 0.55);
+            z-index: 900;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+        }
+        .modal-backdrop.show {
+            display: flex;
+        }
+        .schedule-frame-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .schedule-frame-table th,
+        .schedule-frame-table td {
+            border: 1px solid #e5e7eb;
+            padding: 10px;
+            vertical-align: top;
+        }
+        .schedule-frame-table th {
+            background: #f9fafb;
+            font-weight: 600;
+            color: #374151;
+        }
+        .schedule-frame-row {
+            display: grid;
+            grid-template-columns: minmax(110px, 1fr) minmax(110px, 1fr) 36px;
+            gap: 8px;
+            align-items: center;
+            margin-bottom: 8px;
+        }
         .save-toast {
             position: fixed;
             bottom: 20px;
@@ -241,6 +276,38 @@
         </section>
     </main>
 
+    <div id="scheduleModal" class="modal-backdrop">
+        <div class="bg-white rounded-xl shadow-xl border border-gray-200 w-full max-w-5xl max-h-[90vh] overflow-hidden flex flex-col">
+            <div class="flex items-start justify-between gap-4 p-5 border-b border-gray-200">
+                <div>
+                    <h3 id="scheduleModalTitle" class="text-lg font-semibold text-gray-800">Edit Schedule</h3>
+                    <p id="scheduleModalSubtitle" class="text-sm text-gray-500 mt-1"></p>
+                </div>
+                <button type="button" id="closeScheduleModalBtn" class="text-gray-500 hover:text-gray-800 text-2xl leading-none">&times;</button>
+            </div>
+            <div class="p-5 overflow-y-auto">
+                <label class="block text-sm font-medium text-gray-700 mb-4">
+                    Subject
+                    <input id="scheduleSubjectInput" type="text" class="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[#b0303b]">
+                </label>
+                <table class="schedule-frame-table">
+                    <thead>
+                        <tr>
+                            <th class="w-36">Day</th>
+                            <th>Time Frames</th>
+                            <th class="w-28">Hours</th>
+                        </tr>
+                    </thead>
+                    <tbody id="scheduleFrameBody"></tbody>
+                </table>
+            </div>
+            <div class="flex justify-end gap-3 p-5 border-t border-gray-200 bg-gray-50">
+                <button type="button" id="cancelScheduleBtn" class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-100">Cancel</button>
+                <button type="button" id="saveScheduleBtn" class="px-4 py-2 text-sm font-medium text-white bg-[#8a1f27] rounded-lg hover:bg-[#b0303b]">Save Schedule</button>
+            </div>
+        </div>
+    </div>
+
     <div id="saveToast" class="save-toast">
         <i class="fa-regular fa-circle-check"></i>
         <span>Saved successfully</span>
@@ -265,6 +332,16 @@
         let currentPeriodEnd = '';
         let teacherSearch = '';
         let teacherAssignmentFilter = 'all';
+        let currentScheduleContext = null;
+        const scheduleDays = [
+            { key: 'mon', label: 'Monday' },
+            { key: 'tue', label: 'Tuesday' },
+            { key: 'wed', label: 'Wednesday' },
+            { key: 'thu', label: 'Thursday' },
+            { key: 'fri', label: 'Friday' },
+            { key: 'sat', label: 'Saturday' },
+            { key: 'sun', label: 'Sunday' }
+        ];
 
         const user = JSON.parse(localStorage.getItem('user') || '{}');
         document.getElementById('userName').textContent = user.name || 'OIC Head';
@@ -332,6 +409,39 @@
             teacherAssignmentFilter = e.target.value;
             loadData();
         });
+
+        document.getElementById('tableBody').addEventListener('click', (e) => {
+            const button = e.target.closest('[data-action="edit-schedule"]');
+            if (!button) return;
+            openScheduleModal(Number(button.dataset.employeeId), button.dataset.level);
+        });
+
+        document.getElementById('scheduleFrameBody').addEventListener('click', (e) => {
+            const addButton = e.target.closest('[data-action="add-frame"]');
+            const removeButton = e.target.closest('[data-action="remove-frame"]');
+
+            if (addButton) {
+                addScheduleFrame(addButton.dataset.day);
+            }
+
+            if (removeButton) {
+                removeButton.closest('.schedule-frame-row')?.remove();
+                updateModalDayTotal(removeButton.dataset.day);
+            }
+        });
+
+        document.getElementById('scheduleFrameBody').addEventListener('input', (e) => {
+            const input = e.target.closest('input[type="time"]');
+            if (!input) return;
+            updateModalDayTotal(input.dataset.day);
+        });
+
+        document.getElementById('closeScheduleModalBtn').addEventListener('click', closeScheduleModal);
+        document.getElementById('cancelScheduleBtn').addEventListener('click', closeScheduleModal);
+        document.getElementById('scheduleModal').addEventListener('click', (e) => {
+            if (e.target.id === 'scheduleModal') closeScheduleModal();
+        });
+        document.getElementById('saveScheduleBtn').addEventListener('click', saveScheduleFromModal);
 
         document.querySelectorAll('.loading-tab').forEach(tab => {
             tab.addEventListener('click', () => {
@@ -512,7 +622,7 @@
             }
 
             const headers = isPeriodMode()
-                ? ['Teacher Name', 'Assignment', 'Level', 'Subject', 'Rate/hr', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun', 'Total Hours', 'Total Pay']
+                ? ['Teacher Name', 'Assignment', 'Level', 'Subject', 'Total Hours', 'Action']
                 : ['Teacher Name', 'Subject', 'Rate/hr', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun', 'Total Hours', 'Total Pay'];
             const headerHtml = `<tr><th>${headers.join('</th><th>')}</th></tr>`;
             document.getElementById('tableHeader').innerHTML = headerHtml;
@@ -548,9 +658,23 @@
                     ? `<td>${assignmentLabel(teacher.assignment)}</td><td>${levelLabel(level)}</td>`
                     : '';
 
+                if (isPeriodMode()) {
+                    bodyHtml += `<tr data-id="${teacher.id}" data-level="${level}">
+                        <td style="text-align:left; font-weight:500;">${escapeHtml(teacher.full_name)}</td>
+                        ${scheduleCells}
+                        <td>${escapeHtml(loading.subject || '-')}</td>
+                        <td class="total-cell total-hours-cell">${totalHours.toFixed(1)}</td>
+                        <td>
+                            <button type="button" data-action="edit-schedule" data-employee-id="${teacher.id}" data-level="${level}" class="px-3 py-1.5 text-sm font-medium text-white bg-[#8a1f27] rounded-lg hover:bg-[#b0303b]">
+                                Edit
+                            </button>
+                        </td>
+                    </tr>`;
+                    continue;
+                }
+
                 bodyHtml += `<tr data-id="${teacher.id}" data-level="${level}">
                     <td style="text-align:left; font-weight:500;">${escapeHtml(teacher.full_name)}</td>
-                    ${scheduleCells}
                     <td><input type="text" value="${escapeHtml(loading.subject || '')}" data-field="subject" class="w-32"></td>
                     <td><input type="text" value="₱${rate}/hr" disabled class="bg-gray-100 w-24"></td>
                     <td><input type="number" step="0.5" value="${loading.mon || 0}" data-field="mon" class="w-16"></td>
@@ -618,12 +742,236 @@
             return level === 'shs' ? 'SHS' : 'College';
         }
 
+        function findLoading(employeeId, level) {
+            return allLoads.find(l =>
+                Number(l.employee_id) === Number(employeeId) &&
+                l.load_level === level &&
+                l.period_start === currentPeriodStart &&
+                l.period_end === currentPeriodEnd
+            ) || {
+                employee_id: employeeId,
+                load_level: level,
+                period_start: currentPeriodStart,
+                period_end: currentPeriodEnd,
+                subject: '',
+                mon: 0, tue: 0, wed: 0, thu: 0, fri: 0, sat: 0, sun: 0
+            };
+        }
+
+        function scheduleStorageKey(employeeId, level) {
+            return `oicTeacherSchedule:${employeeId}:${level}:${currentPeriodStart}:${currentPeriodEnd}`;
+        }
+
+        function emptyScheduleFrames() {
+            return scheduleDays.reduce((frames, day) => {
+                frames[day.key] = [];
+                return frames;
+            }, {});
+        }
+
+        function loadScheduleFrames(employeeId, level) {
+            const stored = localStorage.getItem(scheduleStorageKey(employeeId, level));
+            if (!stored) return emptyScheduleFrames();
+
+            try {
+                return { ...emptyScheduleFrames(), ...JSON.parse(stored) };
+            } catch (error) {
+                console.warn('Invalid stored schedule frames:', error);
+                return emptyScheduleFrames();
+            }
+        }
+
+        function saveScheduleFrames(employeeId, level, frames) {
+            localStorage.setItem(scheduleStorageKey(employeeId, level), JSON.stringify(frames));
+        }
+
+        function openScheduleModal(employeeId, level) {
+            const teacher = allEmployees.find(e => Number(e.id) === Number(employeeId));
+            if (!teacher) return;
+
+            const loading = findLoading(employeeId, level);
+            currentScheduleContext = { employeeId, level, teacher, loading };
+
+            document.getElementById('scheduleModalTitle').textContent = `Edit Schedule - ${teacher.full_name}`;
+            document.getElementById('scheduleModalSubtitle').textContent =
+                `${levelLabel(level)} | ${assignmentLabel(teacher.assignment)} | ${currentPeriodStart} to ${currentPeriodEnd}`;
+            document.getElementById('scheduleSubjectInput').value = loading.subject || '';
+            renderScheduleFrameTable(loadScheduleFrames(employeeId, level));
+            document.getElementById('scheduleModal').classList.add('show');
+        }
+
+        function closeScheduleModal() {
+            document.getElementById('scheduleModal').classList.remove('show');
+            currentScheduleContext = null;
+        }
+
+        function renderScheduleFrameTable(framesByDay) {
+            const rows = scheduleDays.map(day => `
+                <tr>
+                    <td class="font-medium text-gray-700">${day.label}</td>
+                    <td>
+                        <div data-day-frames="${day.key}"></div>
+                        <button type="button" data-action="add-frame" data-day="${day.key}" class="mt-2 px-3 py-1.5 text-sm font-medium text-[#8a1f27] bg-red-50 border border-red-100 rounded-lg hover:bg-red-100">
+                            Add time frame
+                        </button>
+                    </td>
+                    <td class="font-semibold text-[#8a1f27]" data-day-total="${day.key}">0.0</td>
+                </tr>
+            `).join('');
+
+            document.getElementById('scheduleFrameBody').innerHTML = rows;
+
+            for (const day of scheduleDays) {
+                const dayFrames = Array.isArray(framesByDay[day.key]) ? framesByDay[day.key] : [];
+                dayFrames.forEach(frame => addScheduleFrame(day.key, frame.start, frame.end));
+                updateModalDayTotal(day.key);
+            }
+        }
+
+        function addScheduleFrame(day, start = '', end = '') {
+            const container = document.querySelector(`[data-day-frames="${day}"]`);
+            if (!container) return;
+
+            const frame = document.createElement('div');
+            frame.className = 'schedule-frame-row';
+            frame.innerHTML = `
+                <input type="time" value="${escapeAttr(start)}" data-day="${day}" data-frame-field="start" class="border border-gray-200 rounded-lg px-2 py-1.5 text-sm focus:ring-2 focus:ring-[#b0303b]">
+                <input type="time" value="${escapeAttr(end)}" data-day="${day}" data-frame-field="end" class="border border-gray-200 rounded-lg px-2 py-1.5 text-sm focus:ring-2 focus:ring-[#b0303b]">
+                <button type="button" data-action="remove-frame" data-day="${day}" class="h-9 w-9 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-100">&times;</button>
+            `;
+            container.appendChild(frame);
+            updateModalDayTotal(day);
+        }
+
+        function collectScheduleFrames() {
+            const frames = emptyScheduleFrames();
+            const totals = {};
+
+            for (const day of scheduleDays) {
+                totals[day.key] = 0;
+                const rows = document.querySelectorAll(`[data-day-frames="${day.key}"] .schedule-frame-row`);
+
+                for (const row of rows) {
+                    const start = row.querySelector('[data-frame-field="start"]').value;
+                    const end = row.querySelector('[data-frame-field="end"]').value;
+                    if (!start && !end) continue;
+                    if (!start || !end) {
+                        throw new Error(`${day.label} has an incomplete time frame.`);
+                    }
+
+                    const hours = getFrameHours(start, end);
+                    if (hours <= 0) {
+                        throw new Error(`${day.label} has an invalid time frame.`);
+                    }
+
+                    frames[day.key].push({ start, end });
+                    totals[day.key] += hours;
+                }
+            }
+
+            return { frames, totals };
+        }
+
+        function updateModalDayTotal(day) {
+            const totalCell = document.querySelector(`[data-day-total="${day}"]`);
+            if (!totalCell) return;
+
+            let total = 0;
+            document.querySelectorAll(`[data-day-frames="${day}"] .schedule-frame-row`).forEach(row => {
+                const start = row.querySelector('[data-frame-field="start"]').value;
+                const end = row.querySelector('[data-frame-field="end"]').value;
+                total += getFrameHours(start, end);
+            });
+            totalCell.textContent = total.toFixed(1);
+        }
+
+        function getFrameHours(start, end) {
+            const startMinutes = timeToMinutes(start);
+            const endMinutes = timeToMinutes(end);
+            if (startMinutes === null || endMinutes === null || endMinutes <= startMinutes) return 0;
+            return (endMinutes - startMinutes) / 60;
+        }
+
+        function timeToMinutes(value) {
+            if (!value || !value.includes(':')) return null;
+            const [hours, minutes] = value.split(':').map(Number);
+            if (Number.isNaN(hours) || Number.isNaN(minutes)) return null;
+            return hours * 60 + minutes;
+        }
+
+        async function saveScheduleFromModal() {
+            if (!currentScheduleContext) return;
+
+            let schedule;
+            try {
+                schedule = collectScheduleFrames();
+            } catch (error) {
+                alert(error.message);
+                return;
+            }
+
+            const { employeeId, level } = currentScheduleContext;
+            const subject = document.getElementById('scheduleSubjectInput').value.trim();
+            const payload = {
+                employee_id: employeeId,
+                period_start: currentPeriodStart,
+                period_end: currentPeriodEnd,
+                subject,
+                mon: Number(schedule.totals.mon || 0),
+                tue: Number(schedule.totals.tue || 0),
+                wed: Number(schedule.totals.wed || 0),
+                thu: Number(schedule.totals.thu || 0),
+                fri: Number(schedule.totals.fri || 0),
+                sat: Number(schedule.totals.sat || 0),
+                sun: Number(schedule.totals.sun || 0)
+            };
+
+            try {
+                await savePeriodLoad(payload, level);
+                saveScheduleFrames(employeeId, level, schedule.frames);
+
+                const existingIndex = allLoads.findIndex(l =>
+                    Number(l.employee_id) === Number(employeeId) &&
+                    l.load_level === level &&
+                    l.period_start === currentPeriodStart &&
+                    l.period_end === currentPeriodEnd
+                );
+
+                const updated = { ...payload, load_level: level };
+                if (existingIndex >= 0) {
+                    allLoads[existingIndex] = updated;
+                } else {
+                    allLoads.push(updated);
+                }
+
+                closeScheduleModal();
+                renderTable();
+                document.getElementById('loadingMessage').classList.add('hidden');
+                document.getElementById('teacherTable').classList.remove('hidden');
+                showSaveToast();
+            } catch (error) {
+                console.error('Error saving schedule:', error);
+                alert('Failed to save schedule. Please try again.');
+            }
+        }
+
         function escapeHtml(str) {
             if (!str) return '';
             return str.replace(/[&<>]/g, function(m) {
                 if (m === '&') return '&amp;';
                 if (m === '<') return '&lt;';
                 if (m === '>') return '&gt;';
+                return m;
+            });
+        }
+
+        function escapeAttr(str) {
+            return String(str || '').replace(/[&<>"']/g, function(m) {
+                if (m === '&') return '&amp;';
+                if (m === '<') return '&lt;';
+                if (m === '>') return '&gt;';
+                if (m === '"') return '&quot;';
+                if (m === "'") return '&#39;';
                 return m;
             });
         }
