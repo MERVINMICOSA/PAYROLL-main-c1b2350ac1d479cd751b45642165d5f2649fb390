@@ -574,13 +574,26 @@
 
             if (isPeriodMode()) {
                 const [shsLoads, collegeLoads] = await Promise.all([
-                    fetchLoadsByLevel('shs'),
-                    fetchLoadsByLevel('college')
+                    fetchTeacherSchedulesByLevel('shs'),
+                    fetchTeacherSchedulesByLevel('college')
                 ]);
                 return [...shsLoads, ...collegeLoads];
             }
 
             return fetchLoadsByLevel(activeLoadingLevel());
+        }
+
+        async function fetchTeacherSchedulesByLevel(level) {
+            const response = await fetch(`/api/teacher-sched.php?level=${level}&period_start=${currentPeriodStart}&period_end=${currentPeriodEnd}`, {
+                credentials: 'include'
+            });
+            if (!response.ok) throw new Error(`Failed to load ${level} teacher schedules`);
+            return normalizeApiRecords(await response.json()).map(row => ({
+                ...row,
+                employee_id: Number(row.employee_id),
+                schedule_data: normalizeScheduleFrames(row.schedule_data || {}),
+                load_level: level
+            }));
         }
 
         async function fetchLoadsByLevel(level) {
@@ -605,6 +618,17 @@
                 body: JSON.stringify(load)
             });
             if (!response.ok) throw new Error(`Failed to save ${type}`);
+            return response.json();
+        }
+
+        async function saveTeacherSchedule(load, level) {
+            const response = await fetch(`/api/teacher-sched.php?level=${level}`, {
+                method: 'POST',
+                credentials: 'include',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ...load, level })
+            });
+            if (!response.ok) throw new Error(`Failed to save ${level} teacher schedule`);
             return response.json();
         }
 
@@ -784,12 +808,9 @@
                 period_start: currentPeriodStart,
                 period_end: currentPeriodEnd,
                 subject: '',
+                schedule_data: emptyScheduleFrames(),
                 mon: 0, tue: 0, wed: 0, thu: 0, fri: 0, sat: 0, sun: 0
             };
-        }
-
-        function scheduleStorageKey(employeeId, level) {
-            return `oicTeacherSchedule:${employeeId}:${level}:${currentPeriodStart}:${currentPeriodEnd}`;
         }
 
         function emptyScheduleFrames() {
@@ -799,20 +820,36 @@
             }, {});
         }
 
-        function loadScheduleFrames(employeeId, level) {
-            const stored = localStorage.getItem(scheduleStorageKey(employeeId, level));
-            if (!stored) return emptyScheduleFrames();
+        function normalizeScheduleFrames(value) {
+            const frames = emptyScheduleFrames();
+            let source = value;
 
-            try {
-                return { ...emptyScheduleFrames(), ...JSON.parse(stored) };
-            } catch (error) {
-                console.warn('Invalid stored schedule frames:', error);
-                return emptyScheduleFrames();
+            if (typeof source === 'string') {
+                try {
+                    source = JSON.parse(source);
+                } catch (error) {
+                    source = {};
+                }
             }
+
+            source = source && typeof source === 'object' ? source : {};
+
+            for (const day of scheduleDays) {
+                frames[day.key] = Array.isArray(source[day.key])
+                    ? source[day.key].map(frame => ({
+                        start: frame.start || '',
+                        end: frame.end || '',
+                        subject: frame.subject || '',
+                        room: frame.room || ''
+                    }))
+                    : [];
+            }
+
+            return frames;
         }
 
-        function saveScheduleFrames(employeeId, level, frames) {
-            localStorage.setItem(scheduleStorageKey(employeeId, level), JSON.stringify(frames));
+        function loadScheduleFrames(employeeId, level) {
+            return normalizeScheduleFrames(findLoading(employeeId, level).schedule_data || {});
         }
 
         function openScheduleModal(employeeId, level) {
@@ -992,18 +1029,19 @@
                 period_start: currentPeriodStart,
                 period_end: currentPeriodEnd,
                 subject,
+                schedule_data: schedule.frames,
                 mon: Number(schedule.totals.mon || 0),
                 tue: Number(schedule.totals.tue || 0),
                 wed: Number(schedule.totals.wed || 0),
                 thu: Number(schedule.totals.thu || 0),
                 fri: Number(schedule.totals.fri || 0),
                 sat: Number(schedule.totals.sat || 0),
-                sun: Number(schedule.totals.sun || 0)
+                sun: Number(schedule.totals.sun || 0),
+                total_hours: Object.values(schedule.totals).reduce((sum, hours) => sum + Number(hours || 0), 0)
             };
 
             try {
-                await savePeriodLoad(payload, level);
-                saveScheduleFrames(employeeId, level, schedule.frames);
+                await saveTeacherSchedule(payload, level);
 
                 const existingIndex = allLoads.findIndex(l =>
                     Number(l.employee_id) === Number(employeeId) &&
