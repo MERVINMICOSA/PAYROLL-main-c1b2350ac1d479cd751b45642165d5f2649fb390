@@ -340,24 +340,54 @@ class Database {
         // Delete existing payroll for this exact period (regenerate fresh)
         $this->delete('payroll', 'period_start = ? AND period_end = ?', [$period_start, $period_end]);
         
-        // Get employees for this period's attendance
+        // Get employees for this period's attendance, with EDA summarized separately
+        // so lates/absences/overtime are not multiplied by multiple attendance rows.
         $attendance = $this->fetchAll("
-            SELECT DISTINCT a.employee_id, e.full_name, e.hourly_rate, e.admin_pay_rate, e.assignment,
-                   SUM(a.hours_worked) as total_hours,
-                   SUM(a.overtime) as total_ot,
-                   SUM(a.admin_pay_rate * a.hours_worked) as admin_total
-            FROM attendance a
-            JOIN employees e ON a.employee_id = e.id
-            WHERE a.period_start = ? AND a.period_end = ?
-            GROUP BY a.employee_id, e.full_name, e.hourly_rate, e.admin_pay_rate, e.assignment
-        ", [$period_start, $period_end]);
+            SELECT a.employee_id, emp.full_name, emp.hourly_rate, emp.admin_pay_rate, emp.assignment,
+                   a.total_hours,
+                   a.total_ot,
+                   a.admin_total,
+                   COALESCE(eda.total_lates, 0) as total_lates,
+                   COALESCE(eda.total_absences, 0) as total_absences,
+                   COALESCE(eda.total_eda_ot, 0) as total_eda_ot
+            FROM (
+                SELECT employee_id, period_start, period_end,
+                       SUM(COALESCE(hours_worked, 0)) as total_hours,
+                       SUM(COALESCE(overtime, 0)) as total_ot,
+                       SUM(COALESCE(admin_pay_rate, 0) * COALESCE(hours_worked, 0)) as admin_total
+                FROM attendance
+                WHERE period_start = ? AND period_end = ?
+                GROUP BY employee_id, period_start, period_end
+            ) a
+            JOIN employees emp ON a.employee_id = emp.id
+            LEFT JOIN (
+                SELECT employee_id, period_start, period_end,
+                       SUM(COALESCE(lates, 0)) as total_lates,
+                       SUM(COALESCE(absences, 0)) as total_absences,
+                       SUM(COALESCE(overtime, 0)) as total_eda_ot
+                FROM attendance_eda
+                WHERE period_start = ? AND period_end = ?
+                GROUP BY employee_id, period_start, period_end
+            ) eda ON a.employee_id::text = eda.employee_id
+                AND a.period_start = eda.period_start
+                AND a.period_end = eda.period_end
+        ", [$period_start, $period_end, $period_start, $period_end]);
         
         $generated = [];
         foreach ($attendance as $emp) {
-            $regular_pay = $emp['total_hours'] * $emp['hourly_rate'];
-            $ot_pay = $emp['total_ot'] * $emp['hourly_rate'] * 1.25; // 25% OT premium
+            $totalHours = (float)($emp['total_hours'] ?? 0);
+            $hourlyRate = (float)($emp['hourly_rate'] ?? 0);
+            $undertimeFromLates = ((float)($emp['total_lates'] ?? 0)) / 60;
+            $undertimeFromAbsences = ((float)($emp['total_absences'] ?? 0)) * 8;
+            $totalUndertime = $undertimeFromLates + $undertimeFromAbsences;
+            $regularHours = max(0, $totalHours - $totalUndertime);
+            $totalOvertime = (float)($emp['total_ot'] ?? 0) + (float)($emp['total_eda_ot'] ?? 0);
+
+            $regular_pay = $regularHours * $hourlyRate;
+            $ot_pay = $totalOvertime * $hourlyRate * 1.25; // 25% OT premium
             $admin_pay = $emp['admin_total'] ?? 0;
             $gross = $regular_pay + $ot_pay + $admin_pay;
+            $undertimeDeduction = $totalUndertime * $hourlyRate;
             
             // Simple deductions (customize based on real rates)
             $sss = min($gross * 0.045, 900);
@@ -372,14 +402,15 @@ class Database {
                 'period' => $period_display,
                 'period_start' => $period_start,
                 'period_end' => $period_end,
-                'regular_hours' => (float)($emp['total_hours'] ?? 0),
-                'overtime_hours' => (float)($emp['total_ot'] ?? 0),
+                'regular_hours' => (float)$regularHours,
+                'overtime_hours' => (float)$totalOvertime,
                 'admin_pay' => (float)$admin_pay,
                 'gross_salary' => (float)$gross,
                 'sss' => (float)$sss,
                 'philhealth' => (float)$philhealth,
                 'pagibig' => (float)$pagibig,
                 'withholding_tax' => (float)$tax,
+                'undertime_deduction' => (float)$undertimeDeduction,
                 'total_deduction' => (float)$total_deductions,
                 'net_salary' => (float)$net,
                 'status' => 'Pending'
