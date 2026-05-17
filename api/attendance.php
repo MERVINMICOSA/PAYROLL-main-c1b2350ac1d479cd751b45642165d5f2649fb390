@@ -286,6 +286,14 @@ class AttendanceRouter {
         ];
     }
 
+    private function fetchSyncedSHS(string $empId, string $start, string $end): array {
+        return $this->fetchSyncedFacultyHours('attendance_shs_dtr', $empId, $start, $end);
+    }
+
+    private function fetchSyncedCollege(string $empId, string $start, string $end): array {
+        return $this->fetchSyncedFacultyHours('attendance_college_dtr', $empId, $start, $end);
+    }
+
     private function ensureFacultySourceTables(): void {
         $this->pdo->exec("
             CREATE TABLE IF NOT EXISTS attendance_admin_pay (
@@ -855,8 +863,7 @@ class AttendanceRouter {
 
             $rows = $stmt->fetchAll();
             $data = array_map(function($row) {
-                $synced = $this->fetchSyncedFacultyHours(
-                    'attendance_shs_dtr',
+                $synced = $this->fetchSyncedSHS(
                     (string)$row['employee_id'],
                     (string)$row['period_start'],
                     (string)$row['period_end']
@@ -874,7 +881,7 @@ class AttendanceRouter {
                 jsonError('Missing required fields', 400);
             }
 
-            $synced = $this->fetchSyncedFacultyHours('attendance_shs_dtr', (string)$employeeId, (string)$periodStart, (string)$periodEnd);
+            $synced = $this->fetchSyncedSHS((string)$employeeId, (string)$periodStart, (string)$periodEnd);
             $regularHours = $synced['regular_hours'];
             $adminHours = $synced['admin_hours'];
             $sss = (float)($this->input['sss'] ?? 0);
@@ -967,8 +974,7 @@ class AttendanceRouter {
 
             $rows = $stmt->fetchAll();
             $data = array_map(function($row) {
-                $synced = $this->fetchSyncedFacultyHours(
-                    'attendance_college_dtr',
+                $synced = $this->fetchSyncedCollege(
                     (string)$row['employee_id'],
                     (string)$row['period_start'],
                     (string)$row['period_end']
@@ -986,7 +992,7 @@ class AttendanceRouter {
                 jsonError('Missing required fields', 400);
             }
 
-            $synced = $this->fetchSyncedFacultyHours('attendance_college_dtr', (string)$employeeId, (string)$periodStart, (string)$periodEnd);
+            $synced = $this->fetchSyncedCollege((string)$employeeId, (string)$periodStart, (string)$periodEnd);
             $regularHours = $synced['regular_hours'];
             $adminHours = $synced['admin_hours'];
             $sss = (float)($this->input['sss'] ?? 0);
