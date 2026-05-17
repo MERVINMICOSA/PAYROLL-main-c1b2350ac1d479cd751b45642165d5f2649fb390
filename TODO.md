@@ -1,7 +1,8 @@
 # TODO
 
-## SHS Loading: Total hours missing
-- [x] Identify cause: `api/attendance/shs-loading.php` does not return `total`, only `mon..sun`.
-- [x] Fix UI: compute `total` in `attendance.html` for `currentTab === 'shs-loading'`.
-- [ ] Verify manually: set SHS Loading values for Mon..Sun and ensure Total Hours column updates.
+## SHS Loading / College Loading: Total hours missing
+- [x] Identify cause: `api/attendance/shs-loading.php` doesn't return `total`.
+- [x] Fix SHS Loading UI: compute `total = mon+tue+wed+thu+fri+sat+sun` in `attendance.html`.
+- [x] Fix College Loading UI: compute `total = mon+tue+wed+thu+fri+sat+sun` in `attendance.html` for `college-loading`.
+- [ ] Verify manually: open Attendance page -> select period -> SHS Loading and College Loading -> confirm Total Hours.
 

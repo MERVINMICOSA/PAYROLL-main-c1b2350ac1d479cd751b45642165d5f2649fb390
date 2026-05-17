@@ -1659,9 +1659,9 @@ if (config.hasDynamicDates) {
             const record = savedData[emp.id] || {};
             const row = { id: emp.id, name: emp.full_name };
 
-            // ✅ FIX: SHS Loading backend doesn't return `total`, only mon..sun.
-            // Compute `total` from the returned day values so the "Total Hours" column is displayed.
-            if (currentTab === 'shs-loading') {
+            // ✅ FIX: SHS/College Loading backends don't return `total`, only mon..sun.
+            // Compute it in the UI so the "Total Hours" column is displayed.
+            if (currentTab === 'shs-loading' || currentTab === 'college-loading') {
                 const mon = Number(record.mon ?? 0);
                 const tue = Number(record.tue ?? 0);
                 const wed = Number(record.wed ?? 0);
@@ -1671,6 +1671,7 @@ if (config.hasDynamicDates) {
                 const sun = Number(record.sun ?? 0);
                 row.total = mon + tue + wed + thu + fri + sat + sun;
             }
+
 
             config.fields.forEach(field => {
                 if (field === 'rate') {
