@@ -253,6 +253,103 @@ class AttendanceRouter {
         $stmt->execute([':rate' => $rate]);
     }
 
+    private function fetchSyncedFacultyHours(string $dtrTable, string $employeeId, string $periodStart, string $periodEnd): array {
+        $allowedDtrTables = ['attendance_shs_dtr', 'attendance_college_dtr'];
+        if (!in_array($dtrTable, $allowedDtrTables, true)) {
+            throw new InvalidArgumentException('Invalid DTR table');
+        }
+
+        $this->ensureFacultySourceTables();
+
+        $dtrStmt = $this->pdo->prepare("
+            SELECT total_hours
+            FROM {$dtrTable}
+            WHERE employee_id = :id AND period_start = :start AND period_end = :end
+            LIMIT 1
+        ");
+        $dtrStmt->execute([':id' => $employeeId, ':start' => $periodStart, ':end' => $periodEnd]);
+        $regularHours = (float)($dtrStmt->fetchColumn() ?: 0);
+
+        $adminStmt = $this->pdo->prepare("
+            SELECT admin_hours, total_pay
+            FROM attendance_admin_pay
+            WHERE employee_id = :id AND period_start = :start AND period_end = :end
+            LIMIT 1
+        ");
+        $adminStmt->execute([':id' => $employeeId, ':start' => $periodStart, ':end' => $periodEnd]);
+        $admin = $adminStmt->fetch() ?: [];
+
+        return [
+            'regular_hours' => round($regularHours, 2),
+            'admin_hours' => round((float)($admin['admin_hours'] ?? 0), 2),
+            'admin_total_pay' => round((float)($admin['total_pay'] ?? 0), 2)
+        ];
+    }
+
+    private function ensureFacultySourceTables(): void {
+        $this->pdo->exec("
+            CREATE TABLE IF NOT EXISTS attendance_admin_pay (
+                id SERIAL PRIMARY KEY,
+                employee_id VARCHAR(50) NOT NULL,
+                period_start DATE NOT NULL,
+                period_end DATE NOT NULL,
+                admin_hours DECIMAL(8,2) DEFAULT 0,
+                total_pay DECIMAL(12,2) DEFAULT 0,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(employee_id, period_start, period_end)
+            )
+        ");
+        $this->pdo->exec("
+            CREATE TABLE IF NOT EXISTS attendance_shs_dtr (
+                id SERIAL PRIMARY KEY,
+                employee_id VARCHAR(50) NOT NULL,
+                period_start DATE NOT NULL,
+                period_end DATE NOT NULL,
+                daily_data JSONB DEFAULT '{}',
+                total_hours DECIMAL(10,2) DEFAULT 0,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(employee_id, period_start, period_end)
+            )
+        ");
+        $this->pdo->exec("
+            CREATE TABLE IF NOT EXISTS attendance_college_dtr (
+                id SERIAL PRIMARY KEY,
+                employee_id VARCHAR(50) NOT NULL,
+                period_start DATE NOT NULL,
+                period_end DATE NOT NULL,
+                daily_data JSONB DEFAULT '{}',
+                total_hours DECIMAL(10,2) DEFAULT 0,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(employee_id, period_start, period_end)
+            )
+        ");
+    }
+
+    private function applySyncedFacultyPay(array $row, array $synced, float $regularRate): array {
+        $grossPay = ($synced['regular_hours'] * $regularRate) + $synced['admin_total_pay'];
+        $deductions =
+            (float)($row['sss'] ?? 0) +
+            (float)($row['philhealth'] ?? 0) +
+            (float)($row['pagibig'] ?? 0) +
+            (float)($row['withholding_tax'] ?? 0) +
+            (float)($row['sss_loan'] ?? 0) +
+            (float)($row['hdmf_loan'] ?? 0) +
+            (float)($row['cash_advance'] ?? 0) +
+            (float)($row['atm_deposit'] ?? 0);
+        $netPay = $grossPay - $deductions + (float)($row['marketing_allowance'] ?? 0);
+
+        $row['regular_hours'] = $synced['regular_hours'];
+        $row['admin_hours'] = $synced['admin_hours'];
+        $row['admin_total_pay'] = $synced['admin_total_pay'];
+        $row['gross_pay'] = round($grossPay, 2);
+        $row['net_pay'] = round(max($netPay, 0), 2);
+
+        return $row;
+    }
+
     // ============================================
     // ADMIN MASTER
     // ============================================
@@ -756,7 +853,18 @@ class AttendanceRouter {
                 $stmt = $this->pdo->query("SELECT * FROM attendance_faculty_shs");
             }
 
-            echo json_encode(['success' => true, 'data' => $stmt->fetchAll()]);
+            $rows = $stmt->fetchAll();
+            $data = array_map(function($row) {
+                $synced = $this->fetchSyncedFacultyHours(
+                    'attendance_shs_dtr',
+                    (string)$row['employee_id'],
+                    (string)$row['period_start'],
+                    (string)$row['period_end']
+                );
+                return $this->applySyncedFacultyPay($row, $synced, 80);
+            }, $rows);
+
+            echo json_encode(['success' => true, 'data' => $data]);
         } elseif ($this->method === 'POST') {
             $employeeId = $this->input['employee_id'] ?? null;
             $periodStart = $this->input['period_start'] ?? null;
@@ -766,8 +874,9 @@ class AttendanceRouter {
                 jsonError('Missing required fields', 400);
             }
 
-            $regularHours = (float)($this->input['regular_hours'] ?? $this->input['regular_hrs'] ?? 0);
-            $adminHours = (float)($this->input['admin_hours'] ?? $this->input['admin_hrs'] ?? 0);
+            $synced = $this->fetchSyncedFacultyHours('attendance_shs_dtr', (string)$employeeId, (string)$periodStart, (string)$periodEnd);
+            $regularHours = $synced['regular_hours'];
+            $adminHours = $synced['admin_hours'];
             $sss = (float)($this->input['sss'] ?? 0);
             $philhealth = (float)($this->input['philhealth'] ?? 0);
             $pagibig = (float)($this->input['pagibig'] ?? 0);
@@ -778,7 +887,7 @@ class AttendanceRouter {
             $atmDeposit = (float)($this->input['atm_deposit'] ?? $this->input['atm_dep'] ?? 0);
             $marketingAllowance = (float)($this->input['marketing_allowance'] ?? $this->input['marketing'] ?? 0);
 
-            $grossPay = ($regularHours * 80) + ($adminHours * 70);
+            $grossPay = ($regularHours * 80) + $synced['admin_total_pay'];
             $deductions = $sss + $philhealth + $pagibig + $wtax + $sssLoan + $hdmfLoan + $cashAdvance + $atmDeposit;
             $netPay = $grossPay - $deductions + $marketingAllowance;
             if ($netPay < 0) $netPay = 0;
@@ -811,7 +920,7 @@ class AttendanceRouter {
                 $insert = $this->pdo->prepare("INSERT INTO attendance_faculty_shs (employee_id, period_start, period_end, regular_hours, admin_hours, gross_pay, sss, philhealth, pagibig, withholding_tax, sss_loan, hdmf_loan, cash_advance, atm_deposit, marketing_allowance, net_pay) VALUES (:id, :start, :end, :regular_hours, :admin_hours, :gross_pay, :sss, :philhealth, :pagibig, :withholding_tax, :sss_loan, :hdmf_loan, :cash_advance, :atm_deposit, :marketing_allowance, :net_pay)");
                 $insert->execute(array_merge([':id' => $employeeId, ':start' => $periodStart, ':end' => $periodEnd], $data));
             }
-            echo json_encode(['success' => true, 'gross_pay' => $grossPay, 'net_pay' => $netPay]);
+            echo json_encode(['success' => true, 'gross_pay' => $grossPay, 'net_pay' => $netPay, 'regular_hours' => $regularHours, 'admin_hours' => $adminHours, 'admin_total_pay' => $synced['admin_total_pay']]);
         }
     }
 
@@ -856,7 +965,18 @@ class AttendanceRouter {
                 $stmt = $this->pdo->query("SELECT * FROM attendance_faculty_college");
             }
 
-            echo json_encode(['success' => true, 'data' => $stmt->fetchAll()]);
+            $rows = $stmt->fetchAll();
+            $data = array_map(function($row) {
+                $synced = $this->fetchSyncedFacultyHours(
+                    'attendance_college_dtr',
+                    (string)$row['employee_id'],
+                    (string)$row['period_start'],
+                    (string)$row['period_end']
+                );
+                return $this->applySyncedFacultyPay($row, $synced, 85);
+            }, $rows);
+
+            echo json_encode(['success' => true, 'data' => $data]);
         } elseif ($this->method === 'POST') {
             $employeeId = $this->input['employee_id'] ?? null;
             $periodStart = $this->input['period_start'] ?? null;
@@ -866,19 +986,20 @@ class AttendanceRouter {
                 jsonError('Missing required fields', 400);
             }
 
-            $regularHours = (float)($this->input['regular_hours'] ?? 0);
-            $adminHours = (float)($this->input['admin_hours'] ?? 0);
+            $synced = $this->fetchSyncedFacultyHours('attendance_college_dtr', (string)$employeeId, (string)$periodStart, (string)$periodEnd);
+            $regularHours = $synced['regular_hours'];
+            $adminHours = $synced['admin_hours'];
             $sss = (float)($this->input['sss'] ?? 0);
             $philhealth = (float)($this->input['philhealth'] ?? 0);
             $pagibig = (float)($this->input['pagibig'] ?? 0);
-            $wtax = (float)($this->input['withholding_tax'] ?? 0);
+            $wtax = (float)($this->input['withholding_tax'] ?? $this->input['wtax'] ?? 0);
             $sssLoan = (float)($this->input['sss_loan'] ?? 0);
             $hdmfLoan = (float)($this->input['hdmf_loan'] ?? 0);
-            $cashAdvance = (float)($this->input['cash_advance'] ?? 0);
-            $atmDeposit = (float)($this->input['atm_deposit'] ?? 0);
-            $marketingAllowance = (float)($this->input['marketing_allowance'] ?? 0);
+            $cashAdvance = (float)($this->input['cash_advance'] ?? $this->input['cash_adv'] ?? 0);
+            $atmDeposit = (float)($this->input['atm_deposit'] ?? $this->input['atm_dep'] ?? 0);
+            $marketingAllowance = (float)($this->input['marketing_allowance'] ?? $this->input['marketing'] ?? 0);
 
-            $grossPay = ($regularHours * 85) + ($adminHours * 70);
+            $grossPay = ($regularHours * 85) + $synced['admin_total_pay'];
             $deductions = $sss + $philhealth + $pagibig + $wtax + $sssLoan + $hdmfLoan + $cashAdvance + $atmDeposit;
             $netPay = $grossPay - $deductions + $marketingAllowance;
             if ($netPay < 0) $netPay = 0;
@@ -911,7 +1032,7 @@ class AttendanceRouter {
                 $insert = $this->pdo->prepare("INSERT INTO attendance_faculty_college (employee_id, period_start, period_end, regular_hours, admin_hours, gross_pay, sss, philhealth, pagibig, withholding_tax, sss_loan, hdmf_loan, cash_advance, atm_deposit, marketing_allowance, net_pay) VALUES (:id, :start, :end, :regular_hours, :admin_hours, :gross_pay, :sss, :philhealth, :pagibig, :withholding_tax, :sss_loan, :hdmf_loan, :cash_advance, :atm_deposit, :marketing_allowance, :net_pay)");
                 $insert->execute(array_merge([':id' => $employeeId, ':start' => $periodStart, ':end' => $periodEnd], $data));
             }
-            echo json_encode(['success' => true, 'gross_pay' => $grossPay, 'net_pay' => $netPay]);
+            echo json_encode(['success' => true, 'gross_pay' => $grossPay, 'net_pay' => $netPay, 'regular_hours' => $regularHours, 'admin_hours' => $adminHours, 'admin_total_pay' => $synced['admin_total_pay']]);
         }
     }
 

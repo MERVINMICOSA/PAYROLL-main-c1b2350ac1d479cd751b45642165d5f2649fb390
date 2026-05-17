@@ -1146,7 +1146,7 @@ let periodManager = null;
                 columns: ['Employee Name', 'Regular Hrs', 'Admin Hrs', 'Gross Pay', 'SSS', 'PhilHealth', 'Pag-IBIG', 'W/Tax', 'SSS Loan', 'HDMF Loan', 'Cash Adv', 'ATM Dep', 'Marketing', 'Net Pay'],
                 employeeFilter: (emp) => emp.assignment === 'shs_only' || emp.assignment === 'both',
                 fields: ['regular_hrs', 'admin_hrs', 'gross_pay', 'sss', 'philhealth', 'pagibig', 'wtax', 'sss_loan', 'hdmf_loan', 'cash_adv', 'atm_dep', 'marketing', 'net_pay'],
-                editable: [true, true, false, true, true, true, true, true, true, true, true, true, false],
+                editable: [false, true, false, true, true, true, true, true, true, true, true, true, false],
                 hasDynamicDates: false
             },
             'faculty-college': {
@@ -1154,7 +1154,7 @@ let periodManager = null;
                 columns: ['Employee Name', 'Regular Hrs', 'Admin Hrs', 'Gross Pay', 'SSS', 'PhilHealth', 'Pag-IBIG', 'W/Tax', 'SSS Loan', 'HDMF Loan', 'Cash Adv', 'ATM Dep', 'Marketing', 'Net Pay'],
                 employeeFilter: (emp) => emp.assignment === 'college_only' || emp.assignment === 'both',
                 fields: ['regular_hrs', 'admin_hrs', 'gross_pay', 'sss', 'philhealth', 'pagibig', 'wtax', 'sss_loan', 'hdmf_loan', 'cash_adv', 'atm_dep', 'marketing', 'net_pay'],
-                editable: [true, true, false, true, true, true, true, true, true, true, true, true, false],
+                editable: [false, true, false, true, true, true, true, true, true, true, true, true, false],
                 hasDynamicDates: false
             },
             'faculty-merge': {
