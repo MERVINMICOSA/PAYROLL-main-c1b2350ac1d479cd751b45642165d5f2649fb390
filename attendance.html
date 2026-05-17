@@ -1095,7 +1095,7 @@ let periodManager = null;
                 columns: ['Employee Name', 'Subject', 'Rate/hr', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun', 'Total Hours'],
                 employeeFilter: (emp) => emp.assignment === 'shs_only' || emp.assignment === 'both',
                 fields: ['subject', 'rate', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun', 'total'],
-                editable: [true, false, true, true, true, true, true, true, true, false],
+                editable: [false, false, false, false, false, false, false, false, false, false],
                 hasDynamicDates: false
             },
             'shs-dtr': {
@@ -1112,7 +1112,7 @@ let periodManager = null;
                 columns: ['Employee Name', 'Subject', 'Rate/hr', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun', 'Total Hours'],
                 employeeFilter: (emp) => emp.assignment === 'college_only' || emp.assignment === 'both',
                 fields: ['subject', 'rate', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun', 'total'],
-                editable: [true, false, true, true, true, true, true, true, true, false],
+                editable: [false, false, false, false, false, false, false, false, false, false],
                 hasDynamicDates: false
             },
             'college-dtr': {
