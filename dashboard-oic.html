@@ -120,11 +120,11 @@
             </div>
             <span class="font-bold text-lg">Philtech GMA - OIC</span>
         </div>
-        
+
         <div class="hidden md:flex items-center gap-1">
             <a href="dashboard-oic.html" class="nav-link active px-4 py-2 rounded-lg bg-[#b0303b] text-white font-medium">Teacher Loading</a>
         </div>
-        
+
         <div class="flex items-center gap-3">
             <span class="text-sm hidden sm:block" id="userName">OIC Head</span>
             <div class="relative group">
@@ -137,20 +137,20 @@
     </nav>
 
     <main class="p-6 md:p-8 max-w-7xl mx-auto">
-        
+
         <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
             <div>
                 <h1 class="text-2xl font-bold text-[#8a1f27]">Teacher Loading</h1>
                 <p class="text-gray-500 text-sm mt-1">Assign subjects and daily hours for teachers (rates are set by Accountant)</p>
             </div>
-            
+
             <div class="flex items-center gap-3">
                 <select id="semesterSelect" class="border border-gray-200 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-[#b0303b]">
                     <option value="1st Sem">1st Semester</option>
                     <option value="2nd Sem">2nd Semester</option>
                     <option value="Summer">Summer</option>
                 </select>
-                
+
                 <select id="schoolYearSelect" class="border border-gray-200 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-[#b0303b]">
                     <option value="2024-2025">2024-2025</option>
                     <option value="2025-2026" selected>2025-2026</option>
@@ -162,6 +162,8 @@
             <div class="flex whitespace-nowrap" id="loadingTabs">
                 <div class="loading-tab active" data-level="shs">📚 SHS Faculty Loading</div>
                 <div class="loading-tab" data-level="college">🎓 College Faculty Loading</div>
+                <div class="loading-tab" data-level="period-hours">Set Hours by Period</div>
+                <div class="loading-tab" data-level="period-schedule">Edit Schedule by Period</div>
             </div>
         </div>
 
@@ -169,6 +171,30 @@
             <div class="flex justify-between items-center mb-4">
                 <h2 class="font-semibold text-gray-800" id="currentLevelTitle">SHS Faculty Loading</h2>
                 <span class="text-sm text-gray-500">Click any cell to edit - saves automatically</span>
+            </div>
+            <div id="periodControls" class="hidden mb-4 grid gap-3 md:grid-cols-[minmax(220px,1fr)_150px_150px_150px_auto] items-end bg-gray-50 rounded-lg p-4">
+                <label class="text-sm font-medium text-gray-700">
+                    Period
+                    <select id="periodSelect" class="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[#b0303b]">
+                        <option value="">Custom period</option>
+                    </select>
+                </label>
+                <label class="text-sm font-medium text-gray-700">
+                    Start
+                    <input id="periodStartInput" type="date" class="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[#b0303b]">
+                </label>
+                <label class="text-sm font-medium text-gray-700">
+                    End
+                    <input id="periodEndInput" type="date" class="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[#b0303b]">
+                </label>
+                <label class="text-sm font-medium text-gray-700">
+                    Level
+                    <select id="periodLevelSelect" class="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[#b0303b]">
+                        <option value="shs">SHS</option>
+                        <option value="college">College</option>
+                    </select>
+                </label>
+                <div class="text-sm text-gray-500" id="selectedPeriodInfo">No period selected</div>
             </div>
 
             <div id="loadingContainer" class="grid-container">
@@ -191,44 +217,80 @@
         <span>Saved successfully</span>
     </div>
 
-    <script type="module" src="js/database.js"></script>
     <script src="js/navigation.js"></script>
+    <script src="js/period-manager.js"></script>
     <script type="module">
         console.log("=== OIC DASHBOARD LOADED ===");
-        
-        const Database = await import('./js/database.js').then(m => m.Database || m);
-        
+
+        await import('./js/database.js');
+        const Database = window.Database;
+
         let currentLevel = 'shs';
         let currentSemester = '1st Sem';
         let currentSchoolYear = '2025-2026';
         let allEmployees = [];
         let allLoads = [];
         let saveTimeout = null;
-        
+        let periodManager = null;
+        let currentPeriodStart = '';
+        let currentPeriodEnd = '';
+        let periodLevel = 'shs';
+
         const user = JSON.parse(localStorage.getItem('user') || '{}');
         document.getElementById('userName').textContent = user.name || 'OIC Head';
-        
+
         document.getElementById('semesterSelect').addEventListener('change', (e) => {
             currentSemester = e.target.value;
             loadData();
         });
-        
+
         document.getElementById('schoolYearSelect').addEventListener('change', (e) => {
             currentSchoolYear = e.target.value;
             loadData();
         });
-        
+
+        document.getElementById('periodSelect').addEventListener('change', (e) => {
+            const selected = periodManager?.periods?.find(p => String(p.id) === e.target.value);
+            if (selected) {
+                currentPeriodStart = selected.period_start || selected.startDate;
+                currentPeriodEnd = selected.period_end || selected.endDate;
+                document.getElementById('periodStartInput').value = currentPeriodStart;
+                document.getElementById('periodEndInput').value = currentPeriodEnd;
+            }
+            updateSelectedPeriodInfo();
+            loadData();
+        });
+
+        document.getElementById('periodStartInput').addEventListener('change', (e) => {
+            currentPeriodStart = e.target.value;
+            document.getElementById('periodSelect').value = '';
+            updateSelectedPeriodInfo();
+            loadData();
+        });
+
+        document.getElementById('periodEndInput').addEventListener('change', (e) => {
+            currentPeriodEnd = e.target.value;
+            document.getElementById('periodSelect').value = '';
+            updateSelectedPeriodInfo();
+            loadData();
+        });
+
+        document.getElementById('periodLevelSelect').addEventListener('change', (e) => {
+            periodLevel = e.target.value;
+            loadData();
+        });
+
         document.querySelectorAll('.loading-tab').forEach(tab => {
             tab.addEventListener('click', () => {
                 document.querySelectorAll('.loading-tab').forEach(t => t.classList.remove('active'));
                 tab.classList.add('active');
                 currentLevel = tab.dataset.level;
-                document.getElementById('currentLevelTitle').textContent = 
-                    currentLevel === 'shs' ? 'SHS Faculty Loading' : 'College Faculty Loading';
+                document.getElementById('currentLevelTitle').textContent = getCurrentTitle();
+                document.getElementById('periodControls').classList.toggle('hidden', !isPeriodMode());
                 loadData();
             });
         });
-        
+
         function showSaveToast() {
             const toast = document.getElementById('saveToast');
             toast.classList.add('show');
@@ -237,86 +299,193 @@
                 toast.classList.remove('show');
             }, 2000);
         }
-        
+
+        function isPeriodMode() {
+            return currentLevel === 'period-hours' || currentLevel === 'period-schedule';
+        }
+
+        function getCurrentTitle() {
+            if (currentLevel === 'shs') return 'SHS Faculty Loading';
+            if (currentLevel === 'college') return 'College Faculty Loading';
+            if (currentLevel === 'period-hours') return 'Set Required Hours by Period';
+            return 'Edit Schedule by Period';
+        }
+
+        function activeLoadingLevel() {
+            return isPeriodMode() ? periodLevel : currentLevel;
+        }
+
+        function getRateForTeacher(teacher) {
+            return activeLoadingLevel() === 'shs'
+                ? Number(teacher.rate_shs || 80)
+                : Number(teacher.rate_college || 85);
+        }
+
+        function updateSelectedPeriodInfo() {
+            const info = document.getElementById('selectedPeriodInfo');
+            info.textContent = currentPeriodStart && currentPeriodEnd
+                ? `${currentPeriodStart} to ${currentPeriodEnd}`
+                : 'No period selected';
+        }
+
+        async function initPeriodControls() {
+            if (!window.PeriodManager) return;
+
+            periodManager = new PeriodManager();
+            await periodManager.loadPeriods();
+
+            const periodSelect = document.getElementById('periodSelect');
+            const options = ['<option value="">Custom period</option>'];
+            for (const period of periodManager.periods || []) {
+                const start = period.period_start || period.startDate;
+                const end = period.period_end || period.endDate;
+                options.push(`<option value="${period.id}">${start} to ${end}</option>`);
+            }
+            periodSelect.innerHTML = options.join('');
+
+            const activePeriod = await periodManager.getActivePeriod();
+            if (activePeriod) {
+                currentPeriodStart = activePeriod.period_start || activePeriod.start;
+                currentPeriodEnd = activePeriod.period_end || activePeriod.end;
+                document.getElementById('periodStartInput').value = currentPeriodStart;
+                document.getElementById('periodEndInput').value = currentPeriodEnd;
+                const matching = (periodManager.periods || []).find(p =>
+                    (p.period_start || p.startDate) === currentPeriodStart &&
+                    (p.period_end || p.endDate) === currentPeriodEnd
+                );
+                if (matching) periodSelect.value = String(matching.id);
+            }
+            updateSelectedPeriodInfo();
+        }
+
+        function normalizeApiRecords(response) {
+            if (Array.isArray(response)) return response;
+            if (Array.isArray(response?.data)) return response.data;
+            if (Array.isArray(response?.records)) return response.records;
+            return [];
+        }
+
+        async function fetchPeriodLoads() {
+            if (!currentPeriodStart || !currentPeriodEnd) return [];
+            const type = activeLoadingLevel() === 'shs' ? 'shs-loading' : 'college-loading';
+            const response = await fetch(`/api/attendance.php?type=${type}&period_start=${currentPeriodStart}&period_end=${currentPeriodEnd}`, {
+                credentials: 'include'
+            });
+            if (!response.ok) throw new Error(`Failed to load ${type}`);
+            return normalizeApiRecords(await response.json()).map(row => ({
+                ...row,
+                employee_id: Number(row.employee_id)
+            }));
+        }
+
+        async function savePeriodLoad(load) {
+            const type = activeLoadingLevel() === 'shs' ? 'shs-loading' : 'college-loading';
+            const response = await fetch(`/api/attendance.php?type=${type}`, {
+                method: 'POST',
+                credentials: 'include',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(load)
+            });
+            if (!response.ok) throw new Error(`Failed to save ${type}`);
+            return response.json();
+        }
+
         async function loadData() {
             try {
                 document.getElementById('loadingMessage').classList.remove('hidden');
                 document.getElementById('teacherTable').classList.add('hidden');
-                
+
                 allEmployees = await Database.getAllEmployees();
-                allLoads = await Database.getAllTeacherLoads();
-                
+                allLoads = isPeriodMode()
+                    ? await fetchPeriodLoads()
+                    : await Database.getAllTeacherLoads();
+
                 console.log("Loaded employees:", allEmployees.length);
                 console.log("Loaded teacher loads:", allLoads.length);
-                
-                renderTable();
-                
-                document.getElementById('loadingMessage').classList.add('hidden');
-                document.getElementById('teacherTable').classList.remove('hidden');
+
+                if (renderTable()) {
+                    document.getElementById('loadingMessage').classList.add('hidden');
+                    document.getElementById('teacherTable').classList.remove('hidden');
+                }
             } catch (error) {
                 console.error('Error loading data:', error);
                 document.getElementById('loadingMessage').innerHTML = 'Error loading teachers. Please refresh.';
                 document.getElementById('loadingMessage').classList.remove('hidden');
             }
         }
-        
+
         function renderTable() {
+            if (isPeriodMode() && (!currentPeriodStart || !currentPeriodEnd)) {
+                document.getElementById('loadingMessage').innerHTML = 'Select a payroll period to edit period-based loadings.';
+                document.getElementById('loadingMessage').classList.remove('hidden');
+                document.getElementById('teacherTable').classList.add('hidden');
+                document.getElementById('totalLoadHours').textContent = '0';
+                document.getElementById('totalCost').textContent = '0.00';
+                return false;
+            }
+
             const teachers = allEmployees.filter(emp => {
                 if (emp.status !== 'Active') return false;
-                if (currentLevel === 'shs') {
+                if (activeLoadingLevel() === 'shs') {
                     return emp.assignment === 'shs_only' || emp.assignment === 'both';
                 } else {
                     return emp.assignment === 'college_only' || emp.assignment === 'both';
                 }
             });
-            
+
             if (teachers.length === 0) {
                 document.getElementById('loadingMessage').innerHTML = 'No teachers found. Accountant needs to add teachers first.';
                 document.getElementById('loadingMessage').classList.remove('hidden');
                 document.getElementById('teacherTable').classList.add('hidden');
                 document.getElementById('totalLoadHours').textContent = '0';
                 document.getElementById('totalCost').textContent = '0.00';
-                return;
+                return false;
             }
-            
-            const headers = ['Teacher Name', 'Subject', 'Rate/hr', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun', 'Total Hours', 'Total Pay'];
-            const headerHtml = `美国<th>${headers.join('</th><th>')}</th> </thead>`;
+
+            const headers = isPeriodMode() && currentLevel === 'period-hours'
+                ? ['Teacher Name', 'Rate/hr', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun', 'Total Hours', 'Total Pay']
+                : ['Teacher Name', 'Subject', 'Rate/hr', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun', 'Total Hours', 'Total Pay'];
+            const headerHtml = `<tr><th>${headers.join('</th><th>')}</th></tr>`;
             document.getElementById('tableHeader').innerHTML = headerHtml;
-            
+
             let totalLoadHours = 0;
             let totalCost = 0;
             let bodyHtml = '';
-            
+
             for (const teacher of teachers) {
-                const loading = allLoads.find(l => 
-                    l.employee_id === teacher.id && 
-                    l.semester === currentSemester && 
-                    l.school_year === currentSchoolYear
+                const loading = allLoads.find(l =>
+                    Number(l.employee_id) === Number(teacher.id) &&
+                    (
+                        isPeriodMode()
+                            ? l.period_start === currentPeriodStart && l.period_end === currentPeriodEnd
+                            : l.semester === currentSemester && l.school_year === currentSchoolYear
+                    )
                 ) || {
                     employee_id: teacher.id,
                     semester: currentSemester,
                     school_year: currentSchoolYear,
+                    period_start: currentPeriodStart,
+                    period_end: currentPeriodEnd,
                     subject: '',
                     mon: 0, tue: 0, wed: 0, thu: 0, fri: 0, sat: 0, sun: 0
                 };
-                
-                let rate = 0;
-                if (teacher.assignment === 'shs_only' || teacher.assignment === 'both') {
-                    rate = teacher.rate_shs || 80;
-                } else if (teacher.assignment === 'college_only') {
-                    rate = teacher.rate_college || 85;
-                }
-                
-                const totalHours = (loading.mon || 0) + (loading.tue || 0) + (loading.wed || 0) + 
+
+                const rate = getRateForTeacher(teacher);
+
+                const totalHours = (loading.mon || 0) + (loading.tue || 0) + (loading.wed || 0) +
                                   (loading.thu || 0) + (loading.fri || 0) + (loading.sat || 0) + (loading.sun || 0);
                 const totalPay = totalHours * rate;
-                
+
                 totalLoadHours += totalHours;
                 totalCost += totalPay;
-                
+
+                const subjectCell = isPeriodMode() && currentLevel === 'period-hours'
+                    ? ''
+                    : `<td><input type="text" value="${escapeHtml(loading.subject || '')}" data-field="subject" class="w-32"></td>`;
+
                 bodyHtml += `<tr data-id="${teacher.id}">
                     <td style="text-align:left; font-weight:500;">${escapeHtml(teacher.full_name)}</td>
-                    <td><input type="text" value="${escapeHtml(loading.subject || '')}" data-field="subject" class="w-32"></td>
+                    ${subjectCell}
                     <td><input type="text" value="₱${rate}/hr" disabled class="bg-gray-100 w-24"></td>
                     <td><input type="number" step="0.5" value="${loading.mon || 0}" data-field="mon" class="w-16"></td>
                     <td><input type="number" step="0.5" value="${loading.tue || 0}" data-field="tue" class="w-16"></td>
@@ -329,14 +498,15 @@
                     <td class="total-cell">₱${totalPay.toFixed(2)}</td>
                 </tr>`;
             }
-            
+
             document.getElementById('tableBody').innerHTML = bodyHtml;
             document.getElementById('totalLoadHours').textContent = totalLoadHours.toFixed(1);
             document.getElementById('totalCost').textContent = totalCost.toFixed(2);
-            
+
             attachInputListeners();
+            return true;
         }
-        
+
         function escapeHtml(str) {
             if (!str) return '';
             return str.replace(/[&<>]/g, function(m) {
@@ -346,71 +516,90 @@
                 return m;
             });
         }
-        
+
         async function handleInputChange(e) {
             const input = e.target;
             const row = input.closest('tr');
             if (!row) return;
-            
+
             const employeeId = parseInt(row.dataset.id);
             const field = input.dataset.field;
             let value = input.type === 'number' ? (parseFloat(input.value) || 0) : input.value;
-            
+
             const teacher = allEmployees.find(e => e.id === employeeId);
             if (!teacher) return;
-            
+
             const originalBg = input.style.backgroundColor;
             input.style.backgroundColor = '#fff3cd';
-            
-            let loading = allLoads.find(l => 
-                l.employee_id === employeeId && 
-                l.semester === currentSemester && 
-                l.school_year === currentSchoolYear
+
+            let loading = allLoads.find(l =>
+                Number(l.employee_id) === Number(employeeId) &&
+                (
+                    isPeriodMode()
+                        ? l.period_start === currentPeriodStart && l.period_end === currentPeriodEnd
+                        : l.semester === currentSemester && l.school_year === currentSchoolYear
+                )
             );
-            
+
             if (!loading) {
                 loading = {
                     employee_id: employeeId,
                     semester: currentSemester,
-                    school_year: currentSchoolYear
+                    school_year: currentSchoolYear,
+                    period_start: currentPeriodStart,
+                    period_end: currentPeriodEnd
                 };
             }
-            
+
             loading[field] = value;
-            
+
             try {
-                await Database.saveTeacherLoad(loading);
+                if (isPeriodMode()) {
+                    await savePeriodLoad({
+                        employee_id: employeeId,
+                        period_start: currentPeriodStart,
+                        period_end: currentPeriodEnd,
+                        subject: loading.subject || '',
+                        mon: Number(loading.mon || 0),
+                        tue: Number(loading.tue || 0),
+                        wed: Number(loading.wed || 0),
+                        thu: Number(loading.thu || 0),
+                        fri: Number(loading.fri || 0),
+                        sat: Number(loading.sat || 0),
+                        sun: Number(loading.sun || 0)
+                    });
+                } else {
+                    await Database.saveTeacherLoad(loading);
+                }
                 showSaveToast();
-                
-                const existingIndex = allLoads.findIndex(l => 
-                    l.employee_id === employeeId && 
-                    l.semester === currentSemester && 
-                    l.school_year === currentSchoolYear
+
+                const existingIndex = allLoads.findIndex(l =>
+                    Number(l.employee_id) === Number(employeeId) &&
+                    (
+                        isPeriodMode()
+                            ? l.period_start === currentPeriodStart && l.period_end === currentPeriodEnd
+                            : l.semester === currentSemester && l.school_year === currentSchoolYear
+                    )
                 );
                 if (existingIndex >= 0) {
                     allLoads[existingIndex] = loading;
                 } else {
                     allLoads.push(loading);
                 }
-                
-                const hours = (loading.mon || 0) + (loading.tue || 0) + (loading.wed || 0) + 
+
+                const hours = (loading.mon || 0) + (loading.tue || 0) + (loading.wed || 0) +
                               (loading.thu || 0) + (loading.fri || 0) + (loading.sat || 0) + (loading.sun || 0);
-                
-                let rate = 0;
-                if (teacher.assignment === 'shs_only' || teacher.assignment === 'both') {
-                    rate = teacher.rate_shs || 80;
-                } else {
-                    rate = teacher.rate_college || 85;
-                }
+
+                const rate = getRateForTeacher(teacher);
                 const totalPay = hours * rate;
-                
-                const totalCell = row.querySelector('td:nth-child(11)');
-                const payCell = row.querySelector('td:nth-child(12)');
+
+                const totalCell = row.querySelector(`td:nth-child(${isPeriodMode() && currentLevel === 'period-hours' ? 10 : 11})`);
+                const payCell = row.querySelector(`td:nth-child(${isPeriodMode() && currentLevel === 'period-hours' ? 11 : 12})`);
                 if (totalCell) totalCell.textContent = hours.toFixed(1);
                 if (payCell) payCell.textContent = `₱${totalPay.toFixed(2)}`;
-                
+
                 updateGlobalTotals();
-                
+
             } catch (error) {
                 console.error('Error saving:', error);
                 alert('Failed to save. Please try again.');
@@ -419,40 +608,38 @@
                 input.style.backgroundColor = originalBg;
             }
         }
-        
+
         function updateGlobalTotals() {
             const rows = document.querySelectorAll('#tableBody tr');
             let totalHours = 0;
             let totalCost = 0;
-            
+
             rows.forEach(row => {
                 const teacherId = parseInt(row.dataset.id);
                 const teacher = allEmployees.find(e => e.id === teacherId);
                 if (!teacher) return;
-                
-                let rate = 0;
-                if (teacher.assignment === 'shs_only' || teacher.assignment === 'both') {
-                    rate = teacher.rate_shs || 80;
-                } else {
-                    rate = teacher.rate_college || 85;
-                }
-                
-                const loading = allLoads.find(l => 
-                    l.employee_id === teacherId && 
-                    l.semester === currentSemester && 
-                    l.school_year === currentSchoolYear
+
+                const rate = getRateForTeacher(teacher);
+
+                const loading = allLoads.find(l =>
+                    Number(l.employee_id) === Number(teacherId) &&
+                    (
+                        isPeriodMode()
+                            ? l.period_start === currentPeriodStart && l.period_end === currentPeriodEnd
+                            : l.semester === currentSemester && l.school_year === currentSchoolYear
+                    )
                 ) || { mon:0, tue:0, wed:0, thu:0, fri:0, sat:0, sun:0 };
-                
-                const hours = (loading.mon || 0) + (loading.tue || 0) + (loading.wed || 0) + 
+
+                const hours = (loading.mon || 0) + (loading.tue || 0) + (loading.wed || 0) +
                               (loading.thu || 0) + (loading.fri || 0) + (loading.sat || 0) + (loading.sun || 0);
                 totalHours += hours;
                 totalCost += hours * rate;
             });
-            
+
             document.getElementById('totalLoadHours').textContent = totalHours.toFixed(1);
             document.getElementById('totalCost').textContent = totalCost.toFixed(2);
         }
-        
+
         function attachInputListeners() {
             const inputs = document.querySelectorAll('#tableBody input[type="text"], #tableBody input[type="number"]');
             inputs.forEach(input => {
@@ -461,12 +648,13 @@
                 input.addEventListener('change', handleInputChange);
             });
         }
-        
+
         window.logout = function() {
             localStorage.clear();
             window.location.href = 'index.html';
         };
-        
+
+        await initPeriodControls();
         loadData();
     </script>
 </body>
