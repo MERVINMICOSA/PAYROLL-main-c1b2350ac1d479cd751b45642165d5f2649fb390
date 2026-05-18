@@ -4,6 +4,10 @@ require_once __DIR__ . '/../core/bootstrap.php';
 
 require_auth();
 
+function safeLoadingSubjectNumber($value): float {
+    return is_numeric($value) ? (float)$value : 0.0;
+}
+
 // ===========================
 // DATABASE SAFE INIT
 // ===========================
@@ -67,9 +71,21 @@ switch ($_SERVER['REQUEST_METHOD']) {
                 $stmt = $pdo->query("SELECT * FROM attendance_college_loading");
             }
 
+            $safe = array_map(static function($row) {
+                $row['subject'] = safeLoadingSubjectNumber($row['subject'] ?? 0);
+                $row['mon'] = (float)($row['mon'] ?? 0);
+                $row['tue'] = (float)($row['tue'] ?? 0);
+                $row['wed'] = (float)($row['wed'] ?? 0);
+                $row['thu'] = (float)($row['thu'] ?? 0);
+                $row['fri'] = (float)($row['fri'] ?? 0);
+                $row['sat'] = (float)($row['sat'] ?? 0);
+                $row['sun'] = (float)($row['sun'] ?? 0);
+                return $row;
+            }, $stmt->fetchAll());
+
             echo json_encode([
                 'success' => true,
-                'data' => $stmt->fetchAll()
+                'data' => $safe
             ]);
 
         } catch (Exception $e) {
@@ -92,7 +108,7 @@ switch ($_SERVER['REQUEST_METHOD']) {
         }
 
         // SAFE DATA SANITIZATION
-        $subject = trim((string)($input['subject'] ?? ''));
+        $subject = safeLoadingSubjectNumber($input['subject'] ?? 0);
 
         $mon = (float)($input['mon'] ?? 0);
         $tue = (float)($input['tue'] ?? 0);

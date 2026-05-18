@@ -903,7 +903,7 @@
                     school_year: currentSchoolYear,
                     period_start: currentPeriodStart,
                     period_end: currentPeriodEnd,
-                    subject: '',
+                    subject: 0,
                     mon: 0, tue: 0, wed: 0, thu: 0, fri: 0, sat: 0, sun: 0
                 };
 
@@ -921,7 +921,7 @@
                     bodyHtml += `<tr data-id="${teacher.id}" data-level="${level}">
                         <td style="text-align:left; font-weight:500;">${escapeHtml(teacher.full_name)}</td>
                         ${scheduleCells}
-                        <td>${escapeHtml(loading.subject || '-')}</td>
+                        <td>${toNumberOrZero(loading.subject)}</td>
                         <td class="total-cell total-hours-cell">${totalHours.toFixed(1)}</td>
                         <td>
                             <button type="button" data-action="edit-schedule" data-employee-id="${teacher.id}" data-level="${level}" class="px-3 py-1.5 text-sm font-medium text-white bg-[#8a1f27] rounded-lg hover:bg-[#b0303b]">
@@ -934,7 +934,7 @@
 
                 bodyHtml += `<tr data-id="${teacher.id}" data-level="${level}">
                     <td style="text-align:left; font-weight:500;">${escapeHtml(teacher.full_name)}</td>
-                    <td><input type="text" value="${escapeHtml(loading.subject || '')}" data-field="subject" class="w-32"></td>
+                    <td><input type="number" min="0" step="1" value="${toNumberOrZero(loading.subject)}" data-field="subject" class="w-24"></td>
                     <td><input type="text" value="₱${rate}/hr" disabled class="bg-gray-100 w-24"></td>
                     <td><input type="number" step="0.5" value="${loading.mon || 0}" data-field="mon" class="w-16"></td>
                     <td><input type="number" step="0.5" value="${loading.tue || 0}" data-field="tue" class="w-16"></td>
@@ -1012,7 +1012,7 @@
                 load_level: level,
                 period_start: currentPeriodStart,
                 period_end: currentPeriodEnd,
-                subject: '',
+                subject: 0,
                 schedule_data: emptyScheduleFrames(),
                 mon: 0, tue: 0, wed: 0, thu: 0, fri: 0, sat: 0, sun: 0
             };
@@ -1131,7 +1131,7 @@
             const frame = document.createElement('div');
             frame.className = 'schedule-frame-row';
             frame.innerHTML = `
-                <input type="text" value="${escapeAttr(subject)}" data-day="${day}" data-frame-field="subject" placeholder="Subject" class="border border-gray-200 rounded-lg px-2 py-1.5 text-sm focus:ring-2 focus:ring-[#b0303b]">
+                <input type="number" min="0" step="1" value="${toNumberOrZero(subject)}" data-day="${day}" data-frame-field="subject" placeholder="Subject No." class="border border-gray-200 rounded-lg px-2 py-1.5 text-sm focus:ring-2 focus:ring-[#b0303b]">
                 <input type="text" value="${escapeAttr(room)}" data-day="${day}" data-frame-field="room" placeholder="Room" class="border border-gray-200 rounded-lg px-2 py-1.5 text-sm focus:ring-2 focus:ring-[#b0303b]">
                 <input type="time" value="${escapeAttr(start)}" data-day="${day}" data-frame-field="start" class="border border-gray-200 rounded-lg px-2 py-1.5 text-sm focus:ring-2 focus:ring-[#b0303b]">
                 <input type="time" value="${escapeAttr(end)}" data-day="${day}" data-frame-field="end" class="border border-gray-200 rounded-lg px-2 py-1.5 text-sm focus:ring-2 focus:ring-[#b0303b]">
@@ -1152,7 +1152,7 @@
                 for (const row of rows) {
                     const start = row.querySelector('[data-frame-field="start"]').value;
                     const end = row.querySelector('[data-frame-field="end"]').value;
-                    const subject = row.querySelector('[data-frame-field="subject"]').value.trim();
+                    const subject = toNumberOrZero(row.querySelector('[data-frame-field="subject"]').value);
                     const room = row.querySelector('[data-frame-field="room"]').value.trim();
                     if (!start && !end && !subject && !room) continue;
                     if (!start || !end) {
@@ -1207,13 +1207,14 @@
 
             for (const day of scheduleDays) {
                 for (const frame of framesByDay[day.key] || []) {
-                    if (frame.subject && !subjects.includes(frame.subject)) {
-                        subjects.push(frame.subject);
+                    const subject = toNumberOrZero(frame.subject);
+                    if (subject > 0 && !subjects.includes(subject)) {
+                        subjects.push(subject);
                     }
                 }
             }
 
-            return subjects.join(', ');
+            return subjects.length;
         }
 
         async function saveScheduleFromModal() {
@@ -1228,7 +1229,7 @@
             }
 
             const { employeeId, level } = currentScheduleContext;
-            const subject = getScheduleSubjectSummary(schedule.frames);
+            const subject = Number(getScheduleSubjectSummary(schedule.frames) || 0);
             const payload = {
                 employee_id: employeeId,
                 period_start: currentPeriodStart,
@@ -1294,6 +1295,11 @@
             });
         }
 
+        function toNumberOrZero(value) {
+            const number = Number(value);
+            return Number.isFinite(number) ? number : 0;
+        }
+
         async function handleInputChange(e) {
             const input = e.target;
             const row = input.closest('tr');
@@ -1336,7 +1342,7 @@
                     employee_id: employeeId,
                     period_start: currentPeriodStart,
                     period_end: currentPeriodEnd,
-                    subject: loading.subject || '',
+                    subject: toNumberOrZero(loading.subject),
                     mon: Number(loading.mon || 0),
                     tue: Number(loading.tue || 0),
                     wed: Number(loading.wed || 0),

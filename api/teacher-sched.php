@@ -72,6 +72,11 @@ function teacherSchedSafeDate($date): ?string
     return $d && $d->format('Y-m-d') === $date ? $date : null;
 }
 
+function teacherSchedSafeFloat($value): float
+{
+    return is_numeric($value) ? (float)$value : 0.0;
+}
+
 try {
     $level = $_GET['level'] ?? $input['level'] ?? '';
     $table = teacherSchedTableForLevel((string)$level);
@@ -93,7 +98,7 @@ try {
                 'employee_id' => $row['employee_id'] ?? '',
                 'period_start' => $row['period_start'] ?? '',
                 'period_end' => $row['period_end'] ?? '',
-                'subject' => $row['subject'] ?? '',
+                'subject' => teacherSchedSafeFloat($row['subject'] ?? 0),
                 'schedule_data' => teacherSchedNormalizeSchedule($row['schedule_data'] ?? '{}'),
                 'mon' => (float)($row['mon'] ?? 0),
                 'tue' => (float)($row['tue'] ?? 0),
@@ -140,7 +145,7 @@ try {
         ':employee_id' => $employeeId,
         ':period_start' => $periodStart,
         ':period_end' => $periodEnd,
-        ':subject' => trim((string)($input['subject'] ?? '')),
+        ':subject' => teacherSchedSafeFloat($input['subject'] ?? 0),
         ':schedule_data' => json_encode($scheduleData),
         ':mon' => $mon,
         ':tue' => $tue,

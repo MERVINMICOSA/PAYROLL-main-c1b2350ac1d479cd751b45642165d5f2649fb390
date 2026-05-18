@@ -601,7 +601,7 @@ class AttendanceRouter {
                     'employee_id' => $row['employee_id'] ?? '',
                     'period_start' => $row['period_start'] ?? '',
                     'period_end' => $row['period_end'] ?? '',
-                    'subject' => $row['subject'] ?? '',
+                    'subject' => $this->safeFloat($row['subject'] ?? 0),
                     'mon' => (float)($row['mon'] ?? 0),
                     'tue' => (float)($row['tue'] ?? 0),
                     'wed' => (float)($row['wed'] ?? 0),
@@ -626,7 +626,7 @@ class AttendanceRouter {
             $existing = $stmt->fetch();
 
             $data = [
-                ':subject' => $this->input['subject'] ?? '',
+                ':subject' => $this->safeFloat($this->input['subject'] ?? 0),
                 ':mon' => (float)($this->input['mon'] ?? 0),
                 ':tue' => (float)($this->input['tue'] ?? 0),
                 ':wed' => (float)($this->input['wed'] ?? 0),
@@ -773,7 +773,7 @@ class AttendanceRouter {
                     'employee_id' => $row['employee_id'] ?? '',
                     'period_start' => $row['period_start'] ?? '',
                     'period_end' => $row['period_end'] ?? '',
-                    'subject' => $row['subject'] ?? '',
+                    'subject' => $this->safeFloat($row['subject'] ?? 0),
                     'mon' => (float)($row['mon'] ?? 0),
                     'tue' => (float)($row['tue'] ?? 0),
                     'wed' => (float)($row['wed'] ?? 0),
@@ -798,7 +798,7 @@ class AttendanceRouter {
             $existing = $stmt->fetch();
 
             $data = [
-                ':subject' => trim((string)($this->input['subject'] ?? '')),
+                ':subject' => $this->safeFloat($this->input['subject'] ?? 0),
                 ':mon' => (float)($this->input['mon'] ?? 0),
                 ':tue' => (float)($this->input['tue'] ?? 0),
                 ':wed' => (float)($this->input['wed'] ?? 0),

@@ -17,6 +17,10 @@ set_exception_handler(function($e) {
     jsonError('Server error', 500, $e->getMessage());
 });
 
+function safeLoadingSubjectNumber($value): float {
+    return is_numeric($value) ? (float)$value : 0.0;
+}
+
 // ===============================
 // DATABASE SAFETY CHECK
 // ===============================
@@ -80,7 +84,7 @@ try {
                     'employee_id' => $row['employee_id'] ?? '',
                     'period_start' => $row['period_start'] ?? '',
                     'period_end' => $row['period_end'] ?? '',
-                    'subject' => $row['subject'] ?? '',
+                    'subject' => safeLoadingSubjectNumber($row['subject'] ?? 0),
                     'mon' => (float)($row['mon'] ?? 0),
                     'tue' => (float)($row['tue'] ?? 0),
                     'wed' => (float)($row['wed'] ?? 0),
@@ -129,7 +133,7 @@ try {
             $existing = $stmt->fetch();
 
             $data = [
-                ':subject' => $input['subject'] ?? '',
+                ':subject' => safeLoadingSubjectNumber($input['subject'] ?? 0),
                 ':mon' => (float)($input['mon'] ?? 0),
                 ':tue' => (float)($input['tue'] ?? 0),
                 ':wed' => (float)($input['wed'] ?? 0),
