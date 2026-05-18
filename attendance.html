@@ -1080,12 +1080,29 @@ let currentTableData = [];
 let saveTimeout = null;
 let periodDates = [];
 let periodManager = null;
+
+        function normalizeAssignment(assignment) {
+            const value = String(assignment || '').toLowerCase().trim().replace(/-/g, '_');
+            if (value === 'shs') return 'shs_only';
+            if (value === 'college') return 'college_only';
+            if (value === 'admin_staff') return 'admin';
+            return value;
+        }
+
+        function isActiveEmployee(emp) {
+            return String(emp.status || 'Active').toLowerCase() === 'active';
+        }
+
+        function hasAssignment(emp, assignments) {
+            const assignment = normalizeAssignment(emp.assignment);
+            return assignments.includes(assignment);
+        }
         
         const TAB_CONFIG = {
             eda: {
                 title: 'EDA - Employee Daily Attendance',
                 columns: ['Employee Name', 'Lates/UT (min)', 'Absences (days)', 'Overtime (hrs)'],
-                employeeFilter: (emp) => emp.assignment === 'admin',
+                employeeFilter: (emp) => isActiveEmployee(emp) && hasAssignment(emp, ['admin']),
                 fields: ['lates', 'absences', 'overtime'],
                 editable: [true, true, true],
                 hasDynamicDates: false
@@ -1093,7 +1110,7 @@ let periodManager = null;
             'shs-loading': {
                 title: 'SHS Loading - Teacher Load Assignment',
                 columns: ['Employee Name', 'Subject', 'Rate/hr', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun', 'Total Hours'],
-                employeeFilter: (emp) => emp.assignment === 'shs_only' || emp.assignment === 'both',
+                employeeFilter: (emp) => isActiveEmployee(emp) && hasAssignment(emp, ['shs_only', 'both']),
                 fields: ['subject', 'rate', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun', 'total'],
                 editable: [false, false, false, false, false, false, false, false, false, false],
                 hasDynamicDates: false
@@ -1101,7 +1118,7 @@ let periodManager = null;
             'shs-dtr': {
                 title: 'SHS-DTR - Daily Time Record',
                 columns: ['Employee Name'],
-                employeeFilter: (emp) => emp.assignment === 'shs_only' || emp.assignment === 'both',
+                employeeFilter: (emp) => isActiveEmployee(emp) && hasAssignment(emp, ['shs_only', 'both']),
                 fields: [],
                 editable: [],
                 hasDynamicDates: true,
@@ -1110,7 +1127,7 @@ let periodManager = null;
             'college-loading': {
                 title: 'College Loading - Teacher Load Assignment',
                 columns: ['Employee Name', 'Subject', 'Rate/hr', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun', 'Total Hours'],
-                employeeFilter: (emp) => emp.assignment === 'college_only' || emp.assignment === 'both',
+                employeeFilter: (emp) => isActiveEmployee(emp) && hasAssignment(emp, ['college_only', 'both']),
                 fields: ['subject', 'rate', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun', 'total'],
                 editable: [false, false, false, false, false, false, false, false, false, false],
                 hasDynamicDates: false
@@ -1118,7 +1135,7 @@ let periodManager = null;
             'college-dtr': {
                 title: 'College-DTR - Daily Time Record',
                 columns: ['Employee Name'],
-                employeeFilter: (emp) => emp.assignment === 'college_only' || emp.assignment === 'both',
+                employeeFilter: (emp) => isActiveEmployee(emp) && hasAssignment(emp, ['college_only', 'both']),
                 fields: [],
                 editable: [],
                 hasDynamicDates: true,
@@ -1127,7 +1144,7 @@ let periodManager = null;
             'admin-pay': {
                 title: 'Admin Pay - Extra Hours for Teachers',
                 columns: ['Employee Name', 'Admin Rate (₱/hr)', 'Admin Hours', 'Total Pay'],
-                employeeFilter: (emp) => emp.assignment === 'shs_only' || emp.assignment === 'college_only' || emp.assignment === 'both',
+                employeeFilter: (emp) => isActiveEmployee(emp) && hasAssignment(emp, ['shs_only', 'college_only', 'both']),
                 fields: ['admin_rate', 'admin_hours', 'total_pay'],
                 editable: [true, true, false],
                 hasDynamicDates: false,
@@ -1136,7 +1153,7 @@ let periodManager = null;
             'admin-master': {
                 title: 'ADMIN - Payroll with Deductions',
                 columns: ['Employee Name', 'Basic Pay', 'Overtime', 'Gross', 'SSS', 'PhilHealth', 'Pag-IBIG', 'W/Tax', 'SSS Loan', 'HDMF Loan', 'Cash Adv', 'ATM Dep', 'Transpo', 'Marketing', 'Net Pay'],
-                employeeFilter: (emp) => emp.assignment === 'admin',
+                employeeFilter: (emp) => isActiveEmployee(emp) && hasAssignment(emp, ['admin']),
                 fields: ['basic_pay', 'overtime_pay', 'gross', 'sss', 'philhealth', 'pagibig', 'wtax', 'sss_loan', 'hdmf_loan', 'cash_adv', 'atm_dep', 'transpo', 'marketing', 'net_pay'],
                 editable: [true, true, false, true, true, true, true, true, true, true, true, true, true, false],
                 hasDynamicDates: false
@@ -1144,7 +1161,7 @@ let periodManager = null;
             'faculty-shs': {
                 title: 'FACULTY SHS - Teacher Payroll',
                 columns: ['Employee Name', 'Regular Hrs', 'Admin Hrs', 'Gross Pay', 'SSS', 'PhilHealth', 'Pag-IBIG', 'W/Tax', 'SSS Loan', 'HDMF Loan', 'Cash Adv', 'ATM Dep', 'Marketing', 'Net Pay'],
-                employeeFilter: (emp) => emp.assignment === 'shs_only' || emp.assignment === 'both',
+                employeeFilter: (emp) => isActiveEmployee(emp) && hasAssignment(emp, ['shs_only', 'both']),
                 fields: ['regular_hrs', 'admin_hrs', 'gross_pay', 'sss', 'philhealth', 'pagibig', 'wtax', 'sss_loan', 'hdmf_loan', 'cash_adv', 'atm_dep', 'marketing', 'net_pay'],
                 editable: [false, false, false, true, true, true, true, true, true, true, true, true, false],
                 hasDynamicDates: false
@@ -1152,7 +1169,7 @@ let periodManager = null;
             'faculty-college': {
                 title: 'FACULTY College - Teacher Payroll',
                 columns: ['Employee Name', 'Regular Hrs', 'Admin Hrs', 'Gross Pay', 'SSS', 'PhilHealth', 'Pag-IBIG', 'W/Tax', 'SSS Loan', 'HDMF Loan', 'Cash Adv', 'ATM Dep', 'Marketing', 'Net Pay'],
-                employeeFilter: (emp) => emp.assignment === 'college_only' || emp.assignment === 'both',
+                employeeFilter: (emp) => isActiveEmployee(emp) && hasAssignment(emp, ['college_only', 'both']),
                 fields: ['regular_hrs', 'admin_hrs', 'gross_pay', 'sss', 'philhealth', 'pagibig', 'wtax', 'sss_loan', 'hdmf_loan', 'cash_adv', 'atm_dep', 'marketing', 'net_pay'],
                 editable: [false, false, false, true, true, true, true, true, true, true, true, true, false],
                 hasDynamicDates: false
@@ -1169,7 +1186,7 @@ let periodManager = null;
             guard: {
                 title: 'GUARD - Security Personnel',
                 columns: ['Employee Name', 'Rate/day'],
-                employeeFilter: (emp) => emp.assignment === 'guard',
+                employeeFilter: (emp) => isActiveEmployee(emp) && hasAssignment(emp, ['guard']),
                 fields: ['rate', 'days_worked', 'total_pay'],
                 editable: [true, false, false],
                 hasDynamicDates: true,
@@ -1178,7 +1195,7 @@ let periodManager = null;
             sa: {
                 title: 'SA - Student Assistants',
                 columns: ['Employee Name', 'Rate/day'],
-                employeeFilter: (emp) => emp.assignment === 'sa',
+                employeeFilter: (emp) => isActiveEmployee(emp) && hasAssignment(emp, ['sa']),
                 fields: ['rate', 'days_worked', 'total_pay'],
                 editable: [true, false, false],
                 hasDynamicDates: true,

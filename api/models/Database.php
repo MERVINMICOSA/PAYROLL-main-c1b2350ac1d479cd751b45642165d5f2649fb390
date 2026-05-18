@@ -151,12 +151,25 @@ class Database {
 
     public function getAllEmployees(): array {
         $sql = "SELECT * FROM employees ORDER BY id";
-        return $this->fetchAll($sql);
+        return array_map([$this, 'normalizeEmployeeRecord'], $this->fetchAll($sql));
     }
 
     public function getEmployeeById(int $id): ?array {
         $sql = "SELECT * FROM employees WHERE id = ?";
-        return $this->fetchOne($sql, [Sanitizer::sanitizeInt($id)]);
+        $employee = $this->fetchOne($sql, [Sanitizer::sanitizeInt($id)]);
+        return $employee ? $this->normalizeEmployeeRecord($employee) : null;
+    }
+
+    private function normalizeEmployeeRecord(array $employee): array {
+        $assignment = strtolower(str_replace('-', '_', trim((string)($employee['assignment'] ?? ''))));
+        if ($assignment === 'shs') {
+            $employee['assignment'] = 'shs_only';
+        } elseif ($assignment === 'college') {
+            $employee['assignment'] = 'college_only';
+        } elseif ($assignment === 'admin_staff') {
+            $employee['assignment'] = 'admin';
+        }
+        return $employee;
     }
 
     public function addEmployee(array $data): int {
