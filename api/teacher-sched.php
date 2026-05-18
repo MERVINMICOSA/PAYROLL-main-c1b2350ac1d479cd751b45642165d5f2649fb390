@@ -136,16 +136,19 @@ try {
     $sun = (float)($input['sun'] ?? 0);
     $totalHours = $mon + $tue + $wed + $thu + $fri + $sat + $sun;
 
-    $stmt = $pdo->prepare("SELECT id, schedule_data FROM {$table} WHERE employee_id = :id AND period_start = :start AND period_end = :end");
+    $stmt = $pdo->prepare("SELECT id, schedule_data, subject FROM {$table} WHERE employee_id = :id AND period_start = :start AND period_end = :end");
     $stmt->execute([':id' => $employeeId, ':start' => $periodStart, ':end' => $periodEnd]);
     $existing = $stmt->fetch();
 
     $scheduleData = teacherSchedNormalizeSchedule($input['schedule_data'] ?? ($existing['schedule_data'] ?? '{}'));
+    $subjectCount = $existing
+        ? teacherSchedSafeFloat($existing['subject'] ?? 0)
+        : teacherSchedSafeFloat($input['subject'] ?? 0);
     $data = [
         ':employee_id' => $employeeId,
         ':period_start' => $periodStart,
         ':period_end' => $periodEnd,
-        ':subject' => teacherSchedSafeFloat($input['subject'] ?? 0),
+        ':subject' => $subjectCount,
         ':schedule_data' => json_encode($scheduleData),
         ':mon' => $mon,
         ':tue' => $tue,

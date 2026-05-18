@@ -1065,8 +1065,9 @@
             currentScheduleContext = { employeeId, level, teacher, loading };
 
             document.getElementById('scheduleModalTitle').textContent = `Edit Schedule - ${teacher.full_name}`;
+            const subjectCount = getLoadingSubjectCount(employeeId, level);
             document.getElementById('scheduleModalSubtitle').textContent =
-                `${levelLabel(level)} | ${assignmentLabel(teacher.assignment)} | ${currentPeriodStart} to ${currentPeriodEnd}`;
+                `${levelLabel(level)} | ${assignmentLabel(teacher.assignment)} | ${currentPeriodStart} to ${currentPeriodEnd} | Subjects: ${subjectCount} (set in ${levelLabel(level)} Faculty Loading)`;
             selectedScheduleDay = 'mon';
             renderScheduleFrameTable(loadScheduleFrames(employeeId, level));
             document.getElementById('scheduleModal').classList.add('show');
@@ -1131,7 +1132,7 @@
             const frame = document.createElement('div');
             frame.className = 'schedule-frame-row';
             frame.innerHTML = `
-                <input type="number" min="0" step="1" value="${toNumberOrZero(subject)}" data-day="${day}" data-frame-field="subject" placeholder="Subject No." class="border border-gray-200 rounded-lg px-2 py-1.5 text-sm focus:ring-2 focus:ring-[#b0303b]">
+                <input type="text" value="${escapeAttr(subject)}" data-day="${day}" data-frame-field="subject" placeholder="Subject name" class="border border-gray-200 rounded-lg px-2 py-1.5 text-sm focus:ring-2 focus:ring-[#b0303b]">
                 <input type="text" value="${escapeAttr(room)}" data-day="${day}" data-frame-field="room" placeholder="Room" class="border border-gray-200 rounded-lg px-2 py-1.5 text-sm focus:ring-2 focus:ring-[#b0303b]">
                 <input type="time" value="${escapeAttr(start)}" data-day="${day}" data-frame-field="start" class="border border-gray-200 rounded-lg px-2 py-1.5 text-sm focus:ring-2 focus:ring-[#b0303b]">
                 <input type="time" value="${escapeAttr(end)}" data-day="${day}" data-frame-field="end" class="border border-gray-200 rounded-lg px-2 py-1.5 text-sm focus:ring-2 focus:ring-[#b0303b]">
@@ -1152,7 +1153,7 @@
                 for (const row of rows) {
                     const start = row.querySelector('[data-frame-field="start"]').value;
                     const end = row.querySelector('[data-frame-field="end"]').value;
-                    const subject = toNumberOrZero(row.querySelector('[data-frame-field="subject"]').value);
+                    const subject = row.querySelector('[data-frame-field="subject"]').value.trim();
                     const room = row.querySelector('[data-frame-field="room"]').value.trim();
                     if (!start && !end && !subject && !room) continue;
                     if (!start || !end) {
@@ -1202,19 +1203,8 @@
             return hours * 60 + minutes;
         }
 
-        function getScheduleSubjectSummary(framesByDay) {
-            const subjects = [];
-
-            for (const day of scheduleDays) {
-                for (const frame of framesByDay[day.key] || []) {
-                    const subject = toNumberOrZero(frame.subject);
-                    if (subject > 0 && !subjects.includes(subject)) {
-                        subjects.push(subject);
-                    }
-                }
-            }
-
-            return subjects.length;
+        function getLoadingSubjectCount(employeeId, level) {
+            return toNumberOrZero(findLoading(employeeId, level).subject);
         }
 
         async function saveScheduleFromModal() {
@@ -1229,7 +1219,7 @@
             }
 
             const { employeeId, level } = currentScheduleContext;
-            const subject = Number(getScheduleSubjectSummary(schedule.frames) || 0);
+            const subject = getLoadingSubjectCount(employeeId, level);
             const payload = {
                 employee_id: employeeId,
                 period_start: currentPeriodStart,
